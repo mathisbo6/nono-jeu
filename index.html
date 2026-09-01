@@ -202,6 +202,10 @@
   <!-- VUE JEUX -->
   <div class="view active" id="view-games">
     <h2 class="h-title">Choisis un jeu</h2>
+    <button class="menu-item accent" id="resumeBanner" style="display:none;margin-bottom:14px">
+      <span class="mi-title" id="resumeTitle">Reprendre ma partie</span>
+      <span class="mi-sub">Tu as une table en cours — clique pour y revenir</span>
+    </button>
     <div class="games" id="gamesGrid"></div>
   </div>
 
@@ -211,10 +215,6 @@
     <div id="lobby">
       <!-- Ecran de choix -->
       <div id="lobbyChoice">
-        <button class="menu-item accent" id="resumeBanner" style="display:none;margin-bottom:8px">
-          <span class="mi-title" id="resumeTitle">Reprendre ma partie</span>
-          <span class="mi-sub">Tu as une table en cours — clique pour y revenir</span>
-        </button>
         <button class="menu-item" id="goCreate" style="margin-bottom:8px">
           <span class="mi-title">Créer une partie</span>
           <span class="mi-sub">Choisis ta mise et invite un adversaire</span>
@@ -365,6 +365,8 @@ const MORP=[
  "function nextTableId() view returns(uint256)",
  "function openTablesFor(uint256) view returns(uint256[])",
  "event TableCreated(uint256 indexed tableId,address indexed creator,uint256 stake,bool isPrivate)",
+ "event TableJoined(uint256 indexed tableId,address indexed opponent)",
+ "error NoOpenTable()","error TableDoesNotExist()","error CannotJoinOwnTable()","error StakeNotAllowed()",
  "event GameWon(uint256 indexed tableId,address indexed winner,uint256 payout)",
  "event GameDrawn(uint256 indexed tableId,uint256 refundEach)"
 ];
@@ -392,7 +394,7 @@ const fmt=n=>n.toLocaleString('fr-FR',{maximumFractionDigits:2});
 function toast(m){const t=$("toast");t.textContent=m;t.classList.add("show");clearTimeout(t._h);t._h=setTimeout(()=>t.classList.remove("show"),3200);}
 function showLoading(m){ $("loadingMsg").textContent=m||"Chargement…"; $("loadingOverlay").classList.add("show"); }
 function hideLoading(){ $("loadingOverlay").classList.remove("show"); }
-const LS_TABLE="nono_active_table_"+ADDR.morpion.slice(2,10).toLowerCase();
+const lsTable=()=>"nono_active_table_"+ADDR.morpion.slice(2,10).toLowerCase()+"_"+((me||"0x000000").toLowerCase().slice(2,10));
 
 /* ---- Navigation ---- */
 function show(v){
@@ -400,6 +402,7 @@ function show(v){
   $("view-"+v).classList.add("active");
   document.querySelectorAll(".nav button").forEach(b=>b.classList.toggle("on",b.dataset.view===v));
   if(v==="profile"){ loadHistory(); updateProfile(); renderFriends(); }
+  if(v==="games"){ refreshResume(); }
 }
 document.querySelectorAll(".nav button").forEach(b=>b.onclick=()=>show(b.dataset.view));
 
@@ -420,12 +423,11 @@ $("backFromMorpion").onclick=()=>{ stopPoll(); show("games"); };
 /* Sous-ecrans du lobby : choix / creer / rejoindre */
 function refreshResume(){
   const b=$("resumeBanner"); if(!b) return;
-  const saved=localStorage.getItem(LS_TABLE);
+  const saved=localStorage.getItem(lsTable());
   if(saved){ $("resumeTitle").textContent="Reprendre la table nº "+saved; b.style.display=""; }
   else b.style.display="none";
 }
 function lobbyView(which){
-  if(which==="choice") refreshResume();
   $("lobbyChoice").style.display = which==="choice"?"block":"none";
   $("lobbyCreate").style.display = which==="create"?"block":"none";
   $("lobbyJoin").style.display   = which==="join"?"block":"none";
@@ -457,9 +459,8 @@ async function connect(){
   const chip=$("walletChip");chip.classList.add("on");
   $("walletTxt").textContent=me.slice(0,6)+"…"+me.slice(-4);
   await refreshBal();
-  // reprise auto de partie en cours
-  const saved=localStorage.getItem(LS_TABLE);
-  if(saved){ try{ await resumeTable(BigInt(saved)); }catch(e){} }
+  // partie en cours : on propose la reprise via le bandeau, on n'y entre jamais tout seul
+  refreshResume();
   // detecter changement de compte
   eth.on&&eth.on("accountsChanged",()=>location.reload());
   eth.on&&eth.on("chainChanged",()=>location.reload());
@@ -510,26 +511,33 @@ async function quickMatch(){
   if(!me){toast("Connecte ton wallet.");return;}
   const h=$("quickHint");
   try{
-    showLoading("Recherche d'une table…");
     const stakeWei=ethers.parseUnits(String(selStake),18);
-    const open=await morpion.openTablesFor(stakeWei);
-    const mine=me.toLowerCase();
-    let target=null;
-    for(const id of open){ const t=await morpion.getTable(id); if(Number(t.status)===0 && t.playerX.toLowerCase()!==mine){ target=id; break; } }
     await ensureApproved(selStake);
-    if(target!==null){
+    // 1) Tentative ATOMIQUE : le contrat cherche ET rejoint en une seule operation.
+    //    Impossible que deux joueurs se croisent sans se voir.
+    showLoading("Recherche d'une table…");
+    try{
+      const t=await morpion.joinPublic(stakeWei);
       showLoading("Table trouvée — on te place…");
-      const t=await morpion.joinTable(target); await t.wait();
-      enterTable(target);
-    } else {
-      showLoading("Aucune table libre — création…");
-      const t=await morpion.createTable(stakeWei,false); const rc=await t.wait();
+      const rc=await t.wait();
       let id=null;
-      for(const l of rc.logs){try{const p=morpion.interface.parseLog(l);if(p&&p.name==="TableCreated"){id=p.args.tableId;break;}}catch(e){}}
-      if(id===null) id=(await morpion.nextTableId())-1n;
-      enterTable(id);
-      toast("Table nº"+id+" créée — en attente d'un joueur.");
+      for(const l of rc.logs){try{const p=morpion.interface.parseLog(l);if(p&&p.name==="TableJoined"){id=p.args.tableId;break;}}catch(e){}}
+      if(id!==null){ enterTable(id); h.textContent=""; return; }
+      throw new Error("joined-unknown-id");
+    }catch(e){
+      const m=(e&&(e.reason||e.shortMessage||e.message))||String(e);
+      if(/user rejected|denied/i.test(m)){ h.textContent="Transaction annulée."; return; }
+      if(!/NoOpenTable/i.test(m)) throw e;   // vraie erreur : on remonte
+      // sinon : aucune table libre, on enchaine sur la creation
     }
+    // 2) Aucune table libre a ce palier : on en cree une.
+    showLoading("Aucune table libre — création…");
+    const t=await morpion.createTable(stakeWei,false); const rc=await t.wait();
+    let id=null;
+    for(const l of rc.logs){try{const p=morpion.interface.parseLog(l);if(p&&p.name==="TableCreated"){id=p.args.tableId;break;}}catch(e){}}
+    if(id===null) id=(await morpion.nextTableId())-1n;
+    enterTable(id);
+    toast("Table nº"+id+" créée — en attente d'un joueur.");
     h.textContent="";
   }catch(e){ h.textContent=err(e); }
   finally{ hideLoading(); }
@@ -598,7 +606,8 @@ $("joinPubBtn").onclick=joinPub;
 /* ---- Partie ---- */
 function enterTable(id){
   curTable=BigInt(id);
-  localStorage.setItem(LS_TABLE,curTable.toString());
+  localStorage.setItem(lsTable(),curTable.toString());
+  refreshResume();
   $("tableNo").textContent="Table nº "+curTable;
   $("tableInfo").textContent="";
   $("lobby").style.display="none";
@@ -610,17 +619,20 @@ function enterTable(id){
 async function resumeTable(id){
   const t=await morpion.getTable(id);
   const st=Number(t.status);
+  // Securite : ne jamais entrer dans une table dont on n'est pas joueur
+  const mine = me && (t.playerX.toLowerCase()===me.toLowerCase() || t.playerO.toLowerCase()===me.toLowerCase());
+  if(!mine){ localStorage.removeItem(lsTable()); refreshResume(); return; }
   if(st===0||st===1){ openMorpion(); enterTable(id); }
-  else localStorage.removeItem(LS_TABLE);
+  else localStorage.removeItem(lsTable());
 }
 $("resumeBanner").onclick=async()=>{
-  const saved=localStorage.getItem(LS_TABLE); if(!saved) return;
+  const saved=localStorage.getItem(lsTable()); if(!saved) return;
   if(!me){ toast("Connecte ton wallet."); return; }
   try{ showLoading("Reprise de la table nº "+saved+"…"); await resumeTable(BigInt(saved)); }
-  catch(e){ toast(err(e)); localStorage.removeItem(LS_TABLE); refreshResume(); }
+  catch(e){ toast(err(e)); localStorage.removeItem(lsTable()); refreshResume(); }
   finally{ hideLoading(); }
 };
-$("leaveGame").onclick=()=>{ stopPoll(); $("gameArea").style.display="none"; $("lobby").style.display="block"; refreshResume(); };
+$("leaveGame").onclick=()=>{ stopPoll(); $("gameArea").style.display="none"; $("lobby").style.display="block"; lobbyView("choice"); show("games"); };
 $("copyTable").onclick=async()=>{
   if(curTable===null) return;
   const v=curTable.toString();
@@ -660,11 +672,11 @@ async function refreshGame(){
       const who=t.xToMove?'<span class="x">✕</span>':'<span class="o">◯</span>';
       sb.innerHTML=myTurn?`À toi de jouer ${who}`:`Au tour de ${who}`;
     } else if(st===2){
-      stopPoll(); localStorage.removeItem(LS_TABLE);
+      stopPoll(); localStorage.removeItem(lsTable());
       if(t.winner===ethers.ZeroAddress) sb.textContent="Match nul 🤝";
       else sb.innerHTML=t.winner.toLowerCase()===me.toLowerCase()?"🏆 Tu as gagné !":"Perdu — l'adversaire l'emporte.";
       refreshBal();
-    } else if(st===3){ stopPoll(); localStorage.removeItem(LS_TABLE); sb.textContent="Table annulée."; }
+    } else if(st===3){ stopPoll(); localStorage.removeItem(lsTable()); sb.textContent="Table annulée."; }
     const playing=st===1&&(iX||iO);
     $("abandonBtn").style.display=playing?"":"none";
     $("timeoutBtn").style.display=playing?"":"none";
