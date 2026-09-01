@@ -4,6 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
 <title>NONO</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@700;800&family=Nunito:wght@400;600;700;800;900&display=swap" rel="stylesheet">
 <style>
   :root{
     --bg:#141a2e;          /* bleu nuit */
@@ -32,12 +33,14 @@
   .app{max-width:520px;margin:0 auto;width:100%;flex:1;display:flex;flex-direction:column;padding:0 16px 96px}
 
   /* Top bar */
-  .top{display:flex;align-items:center;justify-content:space-between;padding:18px 2px 14px;position:sticky;top:0;background:linear-gradient(var(--bg) 70%,transparent);z-index:5}
-  .logo{font-size:26px;font-weight:900;letter-spacing:.5px}
+  .banner{display:flex;align-items:center;justify-content:space-between;padding:14px 18px;margin:14px 0 18px;background:linear-gradient(135deg,var(--bg-2),var(--bg-3));border:1px solid var(--line);border-radius:18px;position:sticky;top:12px;z-index:5;box-shadow:0 4px 16px rgba(0,0,0,.25)}
+  .logo{font-size:26px;font-weight:900;letter-spacing:0;display:flex;align-items:center;gap:9px}
+  .logo .word{color:var(--txt);font-family:"Baloo 2","Nunito",sans-serif;font-weight:800;letter-spacing:1px}
+  .logo .mark{width:30px;height:30px;flex:none}
   .logo span{color:var(--amber)}
-  .wallet-chip{background:var(--bg-3);border-radius:999px;padding:8px 14px;font-size:13px;font-weight:700;display:flex;align-items:center;gap:8px;border:none;color:var(--txt)}
+  .wallet-chip{background:rgba(20,26,46,.55);border-radius:999px;padding:8px 14px;font-size:13px;font-weight:700;display:flex;align-items:center;gap:8px;border:1px solid var(--line);color:var(--txt);transition:filter .15s,transform .06s}
   .wallet-chip .dot{width:8px;height:8px;border-radius:50%;background:var(--txt-dim)}
-  .wallet-chip.on .dot{background:var(--green)}
+  .wallet-chip.on .dot{background:var(--green);box-shadow:0 0 8px var(--green)}
 
   /* Balance strip */
   .bal{display:flex;gap:10px;margin-bottom:18px}
@@ -56,7 +59,8 @@
   /* Game cards grid */
   .games{display:grid;grid-template-columns:1fr 1fr;gap:14px}
   .game-card{border-radius:var(--radius);padding:18px 16px;min-height:132px;display:flex;flex-direction:column;justify-content:space-between;position:relative;overflow:hidden;color:#141a2e;text-align:left}
-  .game-card .ico{font-size:40px;line-height:1}
+  .game-card .ico{width:42px;height:42px;line-height:0}
+  .game-card .ico svg{width:42px;height:42px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
   .game-card .nm{font-size:18px;font-weight:900}
   .game-card .sub{font-size:12px;font-weight:700;opacity:.7}
   .game-card.locked{background:var(--bg-2);color:var(--txt-dim);cursor:not-allowed}
@@ -76,6 +80,14 @@
   input:focus,select:focus{outline:none;border-color:var(--amber)}
   .btn{background:var(--amber);color:#141a2e;font-weight:800;font-size:15px;padding:12px 18px;border-radius:12px;transition:transform .06s,filter .15s}
   .btn:active{transform:scale(.97)}
+  /* Surbrillance douce au survol sur tout element cliquable */
+  @media (hover:hover){
+    .btn:hover,.wallet-chip:hover,.stake:hover,.nav button:hover{filter:brightness(1.12);transform:translateY(-1px)}
+    .game-card:not(.locked):hover{filter:brightness(1.06);transform:translateY(-2px)}
+    .cell.free.myturn:hover{background:#33406f;transform:translateY(-1px)}
+    .game-card,.stake,.nav button{transition:filter .15s ease,transform .12s ease}
+    .game-card:not(.locked):hover::after{content:"";position:absolute;inset:0;border-radius:var(--radius);box-shadow:inset 0 0 0 2px rgba(255,255,255,.35);pointer-events:none}
+  }
   .btn:disabled{opacity:.4}
   .btn.sec{background:var(--bg-3);color:var(--txt)}
   .btn.wide{width:100%;padding:14px}
@@ -86,6 +98,21 @@
 
   /* Lobby / game */
   .back{background:none;color:var(--txt-dim);font-weight:800;font-size:14px;padding:6px 0;margin:2px 0 10px}
+  .menu{display:flex;flex-direction:column;gap:12px}
+  .menu-item{width:100%;text-align:left;background:var(--bg-2);border:1px solid var(--line);border-radius:16px;padding:18px 20px;color:var(--txt);display:flex;flex-direction:column;gap:3px;transition:filter .15s,transform .12s,border-color .15s}
+  .menu-item .mi-title{font-size:18px;font-weight:800}
+  .menu-item .mi-sub{font-size:13px;color:var(--txt-dim);font-weight:700}
+  .menu-item.accent{background:linear-gradient(140deg,#ffd27a,#f5b74e);border:none;color:#141a2e}
+  .menu-item.accent .mi-sub{color:#141a2e;opacity:.72}
+  .menu-item.quick{flex-direction:row;align-items:center;gap:14px}
+  .menu-item.quick .mi-ico{width:34px;height:34px;flex:none;display:flex;align-items:center;justify-content:center}
+  .menu-item.quick .mi-ico svg{width:30px;height:30px;fill:#141a2e;stroke:#141a2e;stroke-width:1.5;stroke-linejoin:round}
+  .menu-item.quick .mi-text{display:flex;flex-direction:column;gap:3px}
+  @media (hover:hover){ .menu-item:hover{transform:translateY(-2px);border-color:var(--amber)} .menu-item.accent:hover{filter:brightness(1.06)} }
+  .menu-stakes{display:flex;align-items:center;gap:10px;margin-top:4px;flex-wrap:wrap}
+  .menu-stakes .ms-label{font-size:14px;color:var(--txt-dim);font-weight:800}
+  .menu-stakes .stakes{flex:1;margin-bottom:0}
+  .menu-sep{height:2px;border-radius:2px;background:linear-gradient(90deg,transparent,var(--amber),transparent);margin:14px 0 16px}
   .stakes{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px}
   .stake{flex:1;min-width:60px;background:var(--bg-3);border:2px solid transparent;border-radius:14px;padding:12px 4px;text-align:center;font-weight:800;color:var(--txt)}
   .stake.sel{border-color:var(--amber);color:var(--amber)}
@@ -108,11 +135,33 @@
   .hist-item .res{font-weight:900;font-size:14px}
   .res.win{color:var(--green)} .res.lose{color:var(--x)} .res.draw{color:var(--txt-dim)}
   .empty{text-align:center;color:var(--txt-dim);padding:40px 20px;font-weight:700}
+  .profile-head{display:flex;align-items:center;gap:14px}
+  .avatar{width:54px;height:54px;border-radius:16px;background:linear-gradient(140deg,#ffd27a,#f5b74e);color:#141a2e;font-weight:900;font-size:24px;display:flex;align-items:center;justify-content:center;flex:none;font-family:"Baloo 2","Nunito",sans-serif}
+  .profile-meta{min-width:0}
+  .profile-addr{font-weight:800;font-size:16px;font-family:ui-monospace,Menlo,monospace}
+  .profile-sub{font-size:13px;color:var(--txt-dim);font-weight:700;margin-top:2px}
+  .profile-stats{display:flex;gap:10px;margin-bottom:18px}
+  .pstat{flex:1;background:var(--bg-2);border-radius:16px;padding:14px 8px;text-align:center}
+  .pstat .pv{font-size:22px;font-weight:900}
+  .pstat .pv.pos{color:var(--green)} .pstat .pv.neg{color:var(--x)}
+  .pstat .pk{font-size:12px;color:var(--txt-dim);font-weight:700;margin-top:2px}
+  .sec-title{font-size:16px;margin:4px 2px 12px}
+
+  /* Amis */
+  .friend-item{background:var(--bg-2);border-radius:14px;padding:12px 14px;margin-bottom:10px;display:flex;align-items:center;gap:12px}
+  .friend-item .fav{width:38px;height:38px;border-radius:12px;background:var(--bg-3);color:var(--amber);font-weight:900;font-size:16px;display:flex;align-items:center;justify-content:center;flex:none;font-family:"Baloo 2","Nunito",sans-serif}
+  .friend-item .mid{flex:1;min-width:0}
+  .friend-item .mid .fn{font-weight:800;font-size:15px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .friend-item .mid .fa{font-size:12px;color:var(--txt-dim);font-weight:700;font-family:ui-monospace,Menlo,monospace}
+  .friend-item .del{background:none;color:var(--txt-dim);font-size:16px;font-weight:800;padding:6px 10px;border-radius:10px}
+  @media (hover:hover){ .friend-item .del:hover{color:var(--x);background:var(--bg-3)} }
 
   /* Bottom nav */
   .nav{position:fixed;bottom:0;left:0;right:0;background:var(--bg-2);border-top:1px solid var(--line);display:flex;justify-content:space-around;padding:8px 0 max(8px,env(safe-area-inset-bottom));z-index:10}
   .nav button{background:none;color:var(--txt-dim);font-size:11px;font-weight:800;display:flex;flex-direction:column;align-items:center;gap:3px;padding:6px 18px;border-radius:12px}
-  .nav button .ni{font-size:22px}
+  .nav button .ni{width:24px;height:24px;display:block}
+  .nav button svg{width:24px;height:24px;display:block;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+  .nav button.on svg{stroke:var(--amber)}
   .nav button.on{color:var(--amber)}
 
   /* Toast */
@@ -122,19 +171,26 @@
   .spinner{display:inline-block;width:14px;height:14px;border:2px solid var(--txt-dim);border-top-color:var(--amber);border-radius:50%;animation:spin .7s linear infinite;vertical-align:-2px;margin-right:6px}
   @keyframes spin{to{transform:rotate(360deg)}}
   .net-warn{background:#4a2233;color:#ffb3b3;border-radius:12px;padding:10px 14px;font-size:13px;font-weight:700;margin-bottom:14px;display:none}
+
+  /* Overlay de chargement */
+  .loading-overlay{position:fixed;inset:0;background:rgba(15,20,36,.72);-webkit-backdrop-filter:blur(3px);backdrop-filter:blur(3px);display:none;align-items:center;justify-content:center;z-index:50}
+  .loading-overlay.show{display:flex;animation:fade .2s ease}
+  .lo-card{background:var(--bg-2);border:1px solid var(--line);border-radius:20px;padding:28px 34px;display:flex;flex-direction:column;align-items:center;gap:16px;box-shadow:0 20px 50px rgba(0,0,0,.5);max-width:80vw}
+  .lo-spin{width:46px;height:46px;border:4px solid var(--bg-3);border-top-color:var(--amber);border-radius:50%;animation:spin .8s linear infinite}
+  .lo-msg{font-weight:800;font-size:15px;color:var(--txt);text-align:center;line-height:1.3}
 </style>
 </head>
 <body>
 <div class="app">
-  <div class="top">
-    <div class="logo">NO<span>NO</span></div>
+  <div class="banner">
+    <div class="logo"><svg class="mark" viewBox="0 0 32 32" fill="none"><rect x="1.5" y="1.5" width="29" height="29" rx="9" fill="#f5b74e"/><path d="M10 23V9l12 14V9" stroke="#141a2e" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/><line x1="6.5" y1="16" x2="25.5" y2="16" stroke="#141a2e" stroke-width="3" stroke-linecap="round"/></svg><span class="word">NONO</span></div>
     <button class="wallet-chip" id="walletChip"><span class="dot"></span><span id="walletTxt">Connexion…</span></button>
   </div>
 
   <div class="net-warn" id="netWarn">Passe Phantom sur Base Sepolia (mode Testnet) pour jouer.</div>
 
   <div class="bal">
-    <div class="b"><div class="k">NODC</div><div class="v" id="nodcBal">—</div></div>
+    <div class="b"><div class="k">1 NODC = <span id="rateVal">0,10 $</span></div><div class="v" id="nodcBal">—</div></div>
     <div class="b"><div class="k">USDC test</div><div class="v" id="usdcBal">—</div></div>
   </div>
 
@@ -148,23 +204,61 @@
   <div class="view" id="view-morpion">
     <button class="back" id="backFromMorpion">← Retour aux jeux</button>
     <div id="lobby">
-      <div class="card">
-        <h3>Nouvelle partie de morpion</h3>
-        <div class="stakes" id="stakes"></div>
-        <div class="row-btns">
-          <button class="btn" id="createPrivBtn">Table privée</button>
-          <button class="btn sec" id="createPubBtn">Table publique</button>
+      <!-- Ecran de choix -->
+      <div id="lobbyChoice">
+        <button class="menu-item" id="goCreate" style="margin-bottom:8px">
+          <span class="mi-title">Créer une partie</span>
+          <span class="mi-sub">Choisis ta mise et invite un adversaire</span>
+        </button>
+        <button class="menu-item" id="goJoin">
+          <span class="mi-title">Rejoindre une partie</span>
+          <span class="mi-sub">Avec un numéro de table ou une partie publique</span>
+        </button>
+        <div class="menu-sep"></div>
+        <button class="menu-item accent quick" id="goQuick">
+          <span class="mi-ico"><svg viewBox="0 0 24 24"><polygon points="13 2 4 14 11 14 10 22 20 9 13 9 13 2"/></svg></span>
+          <span class="mi-text"><span class="mi-title">Partie rapide</span><span class="mi-sub">On te trouve un adversaire, ou on t'en attend un</span></span>
+        </button>
+        <div class="menu-stakes" style="margin-top:8px">
+          <div class="stakes" id="stakesQuick"></div>
         </div>
-        <div class="hint" id="createHint"></div>
+        <div class="hint" id="quickHint" style="text-align:center;margin-bottom:6px"></div>
       </div>
-      <div class="card">
-        <h3>Rejoindre</h3>
-        <div class="field">
-          <input id="joinId" type="number" min="1" placeholder="Nº de table">
-          <button class="btn" id="joinBtn">Rejoindre</button>
+
+      <!-- Sous-menu CREER -->
+      <div id="lobbyCreate" style="display:none">
+        <button class="back" id="backToChoice1">← Retour</button>
+        <div class="card">
+          <h3>Table publique</h3>
+          <div class="stakes" id="stakes"></div>
+          <button class="btn wide" id="createPubBtn">Créer une table publique</button>
+          <div class="hint">Ouverte à tous, à l'une des mises standard.</div>
         </div>
-        <button class="btn sec wide" id="joinPubBtn">Rejoindre une partie publique</button>
-        <div class="hint" id="joinHint"></div>
+        <div class="card">
+          <h3>Table privée</h3>
+          <div class="field"><input id="privAmt" type="number" min="1" value="100"><span style="color:var(--txt-dim);font-weight:700">NODC</span></div>
+          <button class="btn wide" id="createPrivBtn">Créer une table privée</button>
+          <div class="hint" id="createHint">Tu fixes le montant que tu veux, puis tu partages le numéro de table à ton adversaire.</div>
+        </div>
+      </div>
+
+      <!-- Sous-menu REJOINDRE -->
+      <div id="lobbyJoin" style="display:none">
+        <button class="back" id="backToChoice2">← Retour</button>
+        <div class="card">
+          <h3>Rejoindre avec un numéro</h3>
+          <div class="field">
+            <input id="joinId" type="number" min="1" placeholder="Nº de table">
+            <button class="btn" id="joinBtn">Rejoindre</button>
+          </div>
+          <div class="hint" id="joinHint"></div>
+        </div>
+        <div class="card">
+          <h3>Rejoindre une partie publique</h3>
+          <div class="stakes" id="stakesJoin"></div>
+          <button class="btn sec wide" id="joinPubBtn">Rejoindre une partie publique</button>
+          <div class="hint" id="joinPubHint">On te place dans une table ouverte à la mise choisie.</div>
+        </div>
       </div>
     </div>
     <div id="gameArea" style="display:none">
@@ -199,19 +293,43 @@
     </div>
   </div>
 
-  <!-- VUE HISTORIQUE -->
-  <div class="view" id="view-history">
-    <h2 class="h-title">Historique</h2>
+  <!-- VUE PROFIL -->
+  <div class="view" id="view-profile">
+    <h2 class="h-title">Profil</h2>
+    <div class="card profile-head">
+      <div class="avatar" id="profAvatar">N</div>
+      <div class="profile-meta">
+        <div class="profile-addr" id="profAddr">Non connecté</div>
+        <div class="profile-sub" id="profSub">Connecte ton wallet pour voir ton profil.</div>
+      </div>
+    </div>
+    <div class="profile-stats">
+      <div class="pstat"><div class="pv" id="statPlayed">—</div><div class="pk">Parties</div></div>
+      <div class="pstat"><div class="pv" id="statWon">—</div><div class="pk">Gagnées</div></div>
+      <div class="pstat"><div class="pv" id="statPnl">—</div><div class="pk">P&L (jeu)</div></div>
+    </div>
+    <h3 class="sec-title">Mes amis</h3>
+    <div class="card">
+      <div class="field"><input id="friendAddr" type="text" placeholder="Adresse 0x… de l'ami"></div>
+      <div class="field"><input id="friendName" type="text" placeholder="Surnom (facultatif)"><button class="btn" id="addFriendBtn">Ajouter</button></div>
+      <div class="hint" id="friendHint">Enregistré sur cet appareil uniquement.</div>
+    </div>
+    <div id="friendsList"></div>
+    <h3 class="sec-title">Mes parties</h3>
     <div id="histList"><div class="empty">Connecte ton wallet pour voir tes parties.</div></div>
   </div>
 </div>
 
 <div class="nav">
-  <button data-view="games" class="on"><span class="ni">🎮</span>Jeux</button>
-  <button data-view="wallet"><span class="ni">💰</span>Portefeuille</button>
-  <button data-view="history"><span class="ni">📜</span>Historique</button>
+  <button data-view="games" class="on">
+    <span class="ni"><svg viewBox="0 0 24 24"><rect x="2.5" y="7" width="19" height="10" rx="5"/><line x1="7" y1="12" x2="9.5" y2="12"/><line x1="8.25" y1="10.75" x2="8.25" y2="13.25"/><circle cx="15.5" cy="11" r="1" fill="currentColor" stroke="none"/><circle cx="17.5" cy="13" r="1" fill="currentColor" stroke="none"/></svg></span>Jeux</button>
+  <button data-view="wallet">
+    <span class="ni"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5"/><path d="M12 7.5v9M9.7 9.4c0-1.1 1-1.9 2.3-1.9s2.3.7 2.3 1.7c0 2.3-4.6 1.3-4.6 3.6 0 1 1 1.8 2.3 1.8s2.3-.8 2.3-1.9"/></svg></span>Portefeuille</button>
+  <button data-view="profile">
+    <span class="ni"><svg viewBox="0 0 24 24"><circle cx="12" cy="8.5" r="3.5"/><path d="M5 20c0-3.6 3.1-6 7-6s7 2.4 7 6"/></svg></span>Profil</button>
 </div>
 
+<div class="loading-overlay" id="loadingOverlay"><div class="lo-card"><span class="lo-spin"></span><div class="lo-msg" id="loadingMsg">Chargement…</div></div></div>
 <div class="toast" id="toast"></div>
 
 <script src="https://cdn.jsdelivr.net/npm/ethers@6.13.2/dist/ethers.umd.min.js"></script>
@@ -220,7 +338,7 @@ const ADDR={
   nodc:"0x9fEEe0b7D258F6531e0559782DBd4bD064BCfc1B",
   usdc:"0x036CbD53842c5426634e7929541eC2318f3dCF7e",
   guichet:"0xB25c5332C1cA37098d733694D9a93ABaFDdA68b6",
-  morpion:"0x6A94DB83D28EeFDE194b7002C7B06b534Ea82a34",
+  morpion:"0x58fD9D4dC8FF8C54e1061577382921825fF54880",
 };
 const CHAIN_ID=84532n, CHAIN_HEX="0x14a34";
 const ERC20=["function balanceOf(address) view returns(uint256)","function approve(address,uint256) returns(bool)","function allowance(address,address) view returns(uint256)"];
@@ -236,12 +354,19 @@ const MORP=[
  "event GameWon(uint256 indexed tableId,address indexed winner,uint256 payout)",
  "event GameDrawn(uint256 indexed tableId,uint256 refundEach)"
 ];
+const ICON={
+ morpion:'<svg viewBox="0 0 24 24"><line x1="9" y1="2.5" x2="9" y2="21.5"/><line x1="15" y1="2.5" x2="15" y2="21.5"/><line x1="2.5" y1="9" x2="21.5" y2="9"/><line x1="2.5" y1="15" x2="21.5" y2="15"/><line x1="4.7" y1="4.7" x2="6.8" y2="6.8"/><line x1="6.8" y1="4.7" x2="4.7" y2="6.8"/><circle cx="18.1" cy="18.1" r="1.7"/></svg>',
+ pfc:'<svg viewBox="0 0 24 24"><circle cx="6" cy="6" r="2.7"/><circle cx="6" cy="18" r="2.7"/><line x1="20" y1="4" x2="8.1" y2="15.9"/><line x1="14.5" y1="14.5" x2="20" y2="20"/><line x1="8.1" y1="8.1" x2="12" y2="12"/></svg>',
+ des:'<svg viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="4.5"/><circle cx="8" cy="8" r="1.15" fill="currentColor" stroke="none"/><circle cx="16" cy="8" r="1.15" fill="currentColor" stroke="none"/><circle cx="12" cy="12" r="1.15" fill="currentColor" stroke="none"/><circle cx="8" cy="16" r="1.15" fill="currentColor" stroke="none"/><circle cx="16" cy="16" r="1.15" fill="currentColor" stroke="none"/></svg>',
+ uno:'<svg viewBox="0 0 24 24"><rect x="6" y="3" width="12" height="18" rx="3"/><ellipse cx="12" cy="12" rx="3.4" ry="6" transform="rotate(-22 12 12)"/></svg>',
+ poker:'<svg viewBox="0 0 24 24"><path d="M12 3.5C9 7 5 9.4 5 13.2A3.2 3.2 0 0 0 11 15c0 2.5-1 4.5-2.7 5.5h7.4C14 19.5 13 17.5 13 15a3.2 3.2 0 0 0 6-1.8C19 9.4 15 7 12 3.5Z"/></svg>',
+};
 const GAMES=[
- {id:"morpion",nm:"Morpion",ico:"⭕",sub:"2 joueurs",cls:"g-morpion",on:true},
- {id:"pfc",nm:"Pierre-Feuille-Ciseaux",ico:"✊",sub:"Bientôt",cls:"g-pfc",on:false},
- {id:"des",nm:"Dés",ico:"🎲",sub:"Bientôt",cls:"g-des",on:false},
- {id:"uno",nm:"Uno",ico:"🃏",sub:"Bientôt",cls:"g-uno",on:false},
- {id:"poker",nm:"Poker",ico:"♠️",sub:"Bientôt",cls:"g-poker",on:false},
+ {id:"morpion",nm:"Morpion",ico:ICON.morpion,sub:"2 joueurs",cls:"g-morpion",on:true},
+ {id:"pfc",nm:"Pierre-Feuille-Ciseaux",ico:ICON.pfc,sub:"Bientôt",cls:"g-pfc",on:false},
+ {id:"des",nm:"Dés",ico:ICON.des,sub:"Bientôt",cls:"g-des",on:false},
+ {id:"uno",nm:"Uno",ico:ICON.uno,sub:"Bientôt",cls:"g-uno",on:false},
+ {id:"poker",nm:"Poker",ico:ICON.poker,sub:"Bientôt",cls:"g-poker",on:false},
 ];
 const STAKES=[10,50,100,500,1000];
 
@@ -251,14 +376,16 @@ const $=id=>document.getElementById(id);
 const f18=v=>Number(ethers.formatUnits(v,18));
 const fmt=n=>n.toLocaleString('fr-FR',{maximumFractionDigits:2});
 function toast(m){const t=$("toast");t.textContent=m;t.classList.add("show");clearTimeout(t._h);t._h=setTimeout(()=>t.classList.remove("show"),3200);}
-const LS_TABLE="nono_active_table";
+function showLoading(m){ $("loadingMsg").textContent=m||"Chargement…"; $("loadingOverlay").classList.add("show"); }
+function hideLoading(){ $("loadingOverlay").classList.remove("show"); }
+const LS_TABLE="nono_active_table_"+ADDR.morpion.slice(2,10).toLowerCase();
 
 /* ---- Navigation ---- */
 function show(v){
   document.querySelectorAll(".view").forEach(x=>x.classList.remove("active"));
   $("view-"+v).classList.add("active");
   document.querySelectorAll(".nav button").forEach(b=>b.classList.toggle("on",b.dataset.view===v));
-  if(v==="history") loadHistory();
+  if(v==="profile"){ loadHistory(); updateProfile(); renderFriends(); }
 }
 document.querySelectorAll(".nav button").forEach(b=>b.onclick=()=>show(b.dataset.view));
 
@@ -273,8 +400,20 @@ function renderGames(){
     g.appendChild(d);
   });
 }
-function openMorpion(){ show("games"); document.querySelectorAll(".view").forEach(x=>x.classList.remove("active")); $("view-morpion").classList.add("active"); }
+function openMorpion(){ show("games"); document.querySelectorAll(".view").forEach(x=>x.classList.remove("active")); $("view-morpion").classList.add("active"); if($("lobbyChoice")){ lobbyView("choice"); $("lobby").style.display="block"; $("gameArea").style.display="none"; } }
 $("backFromMorpion").onclick=()=>{ stopPoll(); show("games"); };
+
+/* Sous-ecrans du lobby : choix / creer / rejoindre */
+function lobbyView(which){
+  $("lobbyChoice").style.display = which==="choice"?"block":"none";
+  $("lobbyCreate").style.display = which==="create"?"block":"none";
+  $("lobbyJoin").style.display   = which==="join"?"block":"none";
+}
+$("goQuick").onclick=quickMatch;
+$("goCreate").onclick=()=>{ renderStakes(); lobbyView("create"); };
+$("goJoin").onclick=()=>{ renderStakes(); lobbyView("join"); };
+$("backToChoice1").onclick=()=>lobbyView("choice");
+$("backToChoice2").onclick=()=>lobbyView("choice");
 
 /* ---- Connexion ---- */
 async function connect(){
@@ -326,13 +465,15 @@ $("withdrawBtn").onclick=()=>tx("wdHint","Retrait",()=>guichet.withdraw(ethers.p
 
 /* ---- Mises ---- */
 function renderStakes(){
-  const s=$("stakes");s.innerHTML="";
-  STAKES.forEach(v=>{
-    const b=document.createElement("div");
-    b.className="stake"+(v===selStake?" sel":"");
-    b.innerHTML=`${v}<small>NODC</small>`;
-    b.onclick=()=>{selStake=v;renderStakes();};
-    s.appendChild(b);
+  ["stakes","stakesJoin","stakesQuick"].forEach(cid=>{
+    const c=$(cid); if(!c) return; c.innerHTML="";
+    STAKES.forEach(v=>{
+      const b=document.createElement("div");
+      b.className="stake"+(v===selStake?" sel":"");
+      b.innerHTML=`${v}<small>NODC</small>`;
+      b.onclick=()=>{selStake=v;renderStakes();};
+      c.appendChild(b);
+    });
   });
 }
 
@@ -340,17 +481,48 @@ function renderStakes(){
 async function ensureApproved(stake){
   const need=ethers.parseUnits(String(stake),18);
   const cur=await nodc.allowance(me,ADDR.morpion);
-  if(cur<need){ $("createHint").innerHTML=`<span class="spinner"></span>Autorise le jeu à utiliser tes NODC…`; const t=await nodc.approve(ADDR.morpion,ethers.MaxUint256); await t.wait(); }
+  if(cur<need){ showLoading("Autorise le jeu à utiliser tes NODC…"); const t=await nodc.approve(ADDR.morpion,ethers.MaxUint256); await t.wait(); }
+}
+
+/* ---- Partie rapide : rejoindre une table publique ouverte, sinon en créer une ---- */
+async function quickMatch(){
+  if(!me){toast("Connecte ton wallet.");return;}
+  const h=$("quickHint");
+  try{
+    showLoading("Recherche d'une table…");
+    const stakeWei=ethers.parseUnits(String(selStake),18);
+    const open=await morpion.openTablesFor(stakeWei);
+    const mine=me.toLowerCase();
+    let target=null;
+    for(const id of open){ const t=await morpion.getTable(id); if(Number(t.status)===0 && t.playerX.toLowerCase()!==mine){ target=id; break; } }
+    await ensureApproved(selStake);
+    if(target!==null){
+      showLoading("Table trouvée — on te place…");
+      const t=await morpion.joinTable(target); await t.wait();
+      enterTable(target);
+    } else {
+      showLoading("Aucune table libre — création…");
+      const t=await morpion.createTable(stakeWei,false); const rc=await t.wait();
+      let id=null;
+      for(const l of rc.logs){try{const p=morpion.interface.parseLog(l);if(p&&p.name==="TableCreated"){id=p.args.tableId;break;}}catch(e){}}
+      if(id===null) id=(await morpion.nextTableId())-1n;
+      enterTable(id);
+      toast("Table nº"+id+" créée — en attente d'un joueur.");
+    }
+    h.textContent="";
+  }catch(e){ h.textContent=err(e); }
+  finally{ hideLoading(); }
 }
 
 /* ---- Créer / rejoindre ---- */
-async function createTable(isPriv){
+async function createTable(isPriv,stakeArg){
   if(!me){toast("Connecte ton wallet.");return;}
   const h=$("createHint");
+  const stakeNodc=(stakeArg!=null)?stakeArg:selStake;
   try{
-    await ensureApproved(selStake);
-    h.innerHTML=`<span class="spinner"></span>Création — confirme dans Phantom…`;
-    const t=await morpion.createTable(ethers.parseUnits(String(selStake),18),isPriv);
+    await ensureApproved(stakeNodc);
+    showLoading(isPriv?"Création de ta table privée…":"Création de ta table…");
+    const t=await morpion.createTable(ethers.parseUnits(String(stakeNodc),18),isPriv);
     const rc=await t.wait();
     let id=null;
     for(const l of rc.logs){try{const p=morpion.interface.parseLog(l);if(p&&p.name==="TableCreated"){id=p.args.tableId;break;}}catch(e){}}
@@ -358,38 +530,47 @@ async function createTable(isPriv){
     h.innerHTML=`Table <b>nº ${id}</b> créée. Partage ce numéro à ton adversaire.`;
     enterTable(id);
   }catch(e){h.textContent=err(e);}
+  finally{ hideLoading(); }
 }
-$("createPrivBtn").onclick=()=>createTable(true);
 $("createPubBtn").onclick=()=>createTable(false);
+$("createPrivBtn").onclick=()=>{
+  const v=Number($("privAmt").value);
+  if(!(v>0)){ $("createHint").textContent="Entre un montant valide (supérieur à 0)."; return; }
+  createTable(true,v);
+};
 
 async function joinById(){
   const v=$("joinId").value; if(!v){toast("Entre un numéro de table.");return;}
   const id=BigInt(v); const h=$("joinHint");
   try{
+    showLoading("Vérification de la table…");
     const t0=await morpion.getTable(id);
     if(Number(t0.status)!==0){ h.textContent="Cette table n'est pas ouverte."; return; }
     await ensureApproved(f18(t0.stake));
-    h.innerHTML=`<span class="spinner"></span>On rejoint — confirme dans Phantom…`;
+    showLoading("On rejoint la partie…");
     const t=await morpion.joinTable(id); await t.wait();
     enterTable(id);
   }catch(e){h.textContent=err(e);}
+  finally{ hideLoading(); }
 }
 $("joinBtn").onclick=joinById;
 
 async function joinPub(){
   if(!me){toast("Connecte ton wallet.");return;}
-  const h=$("joinHint");
+  const h=$("joinPubHint");
   try{
+    showLoading("Recherche d'une table publique…");
     const open=await morpion.openTablesFor(ethers.parseUnits(String(selStake),18));
     const mine=me.toLowerCase();
     let target=null;
     for(const id of open){ const t=await morpion.getTable(id); if(Number(t.status)===0 && t.playerX.toLowerCase()!==mine){ target=id; break; } }
     if(target===null){ h.textContent="Aucune table publique ouverte à cette mise. Crées-en une !"; return; }
     await ensureApproved(selStake);
-    h.innerHTML=`<span class="spinner"></span>On rejoint la table nº ${target}…`;
+    showLoading("On rejoint la table nº "+target+"…");
     const t=await morpion.joinTable(target); await t.wait();
     enterTable(target);
   }catch(e){h.textContent=err(e);}
+  finally{ hideLoading(); }
 }
 $("joinPubBtn").onclick=joinPub;
 
@@ -457,6 +638,14 @@ async function playCell(i){
 $("abandonBtn").onclick=async()=>{ try{const t=await morpion.abandon(curTable);await t.wait();toast("Partie abandonnée.");refreshGame();}catch(e){$("playHint").textContent=err(e);} };
 $("timeoutBtn").onclick=async()=>{ try{const t=await morpion.claimTimeout(curTable);await t.wait();toast("Forfait réclamé.");refreshGame();}catch(e){$("playHint").textContent=err(e);} };
 
+/* ---- Profil ---- */
+function updateProfile(){
+  if(!me){ $("profAddr").textContent="Non connecté"; $("profSub").textContent="Connecte ton wallet pour voir ton profil."; $("profAvatar").textContent="N"; return; }
+  $("profAddr").textContent=me.slice(0,6)+"…"+me.slice(-4);
+  $("profSub").textContent="Base Sepolia · testnet";
+  $("profAvatar").textContent=me.slice(2,3).toUpperCase();
+}
+
 /* ---- Historique (depuis la blockchain) ---- */
 async function loadHistory(){
   const list=$("histList");
@@ -478,8 +667,60 @@ async function loadHistory(){
       rows.push(`<div class="hist-item"><div class="ico">⭕</div><div class="mid"><div class="t">Morpion · nº${i}</div><div class="s">Mise ${f18(t.stake)} NODC</div></div><div class="res ${cls}">${res}</div></div>`);
     }
     list.innerHTML=rows.length?rows.join(""):'<div class="empty">Aucune partie pour l\'instant. Va jouer !</div>';
+    // stats + P&L (uniquement resultats de jeu, en NODC)
+    let played=0,won=0,pnl=0;
+    const COMM=160, BURN=5500, BPS=10000; // 1,6% commission
+    for(let i=next-1;i>=1 && i>=next-40;i--){
+      const t=await morpion.getTable(i);
+      const iX=t.playerX.toLowerCase()===me.toLowerCase(), iO=t.playerO.toLowerCase()===me.toLowerCase();
+      if((!iX&&!iO)||Number(t.status)!==2) continue;
+      played++;
+      const stake=f18(t.stake);
+      if(t.winner===ethers.ZeroAddress){
+        // nul : chacun perd la moitie de la commission reduite (comm/2) / 2 joueurs
+        pnl -= (2*stake)*(COMM/2/BPS)/2;
+      } else if(t.winner.toLowerCase()===me.toLowerCase()){
+        won++;
+        pnl += stake - (2*stake)*(COMM/BPS); // gain = mise adverse moins commission
+      } else {
+        pnl -= stake; // perdu : mise perdue
+      }
+    }
+    $("statPlayed").textContent=played;
+    $("statWon").textContent=won;
+    const pv=$("statPnl");
+    const r=Math.round(pnl*100)/100;
+    pv.textContent=(r>0?"+":"")+r.toLocaleString('fr-FR',{maximumFractionDigits:2});
+    pv.className="pv"+(r>0?" pos":r<0?" neg":"");
   }catch(e){ list.innerHTML='<div class="empty">'+err(e)+'</div>'; }
 }
+
+/* ---- Amis (localStorage, propre à l'appareil) ---- */
+const LS_FRIENDS="nono_friends";
+const escHtml=s=>String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+function loadFriends(){ try{ return JSON.parse(localStorage.getItem(LS_FRIENDS))||[]; }catch(e){ return []; } }
+function saveFriends(a){ localStorage.setItem(LS_FRIENDS,JSON.stringify(a)); }
+function isAddr(a){ try{ return ethers.isAddress(a); }catch(e){ return /^0x[a-fA-F0-9]{40}$/.test(a); } }
+function shortAddr(a){ return a.slice(0,6)+"…"+a.slice(-4); }
+function renderFriends(){
+  const list=$("friendsList"); const fr=loadFriends();
+  if(!fr.length){ list.innerHTML='<div class="empty">Aucun ami pour l\'instant. Ajoute une adresse ci-dessus.</div>'; return; }
+  list.innerHTML=fr.map((f,i)=>{
+    const label=f.name?escHtml(f.name):shortAddr(f.addr);
+    const initial=escHtml((f.name||f.addr.slice(2,3)).slice(0,1).toUpperCase());
+    return `<div class="friend-item"><div class="fav">${initial}</div><div class="mid"><div class="fn">${label}</div><div class="fa">${shortAddr(f.addr)}</div></div><button class="del" data-i="${i}" title="Retirer">✕</button></div>`;
+  }).join("");
+  list.querySelectorAll(".del").forEach(b=>b.onclick=()=>{ const a=loadFriends(); a.splice(Number(b.dataset.i),1); saveFriends(a); renderFriends(); });
+}
+$("addFriendBtn").onclick=()=>{
+  const addr=$("friendAddr").value.trim(), name=$("friendName").value.trim(), h=$("friendHint");
+  if(!isAddr(addr)){ h.textContent="Adresse invalide (format 0x… sur 42 caractères)."; return; }
+  const fr=loadFriends();
+  if(fr.some(f=>f.addr.toLowerCase()===addr.toLowerCase())){ h.textContent="Cet ami est déjà dans ta liste."; return; }
+  fr.push({addr,name}); saveFriends(fr);
+  $("friendAddr").value=""; $("friendName").value=""; h.textContent="Ami ajouté ✓";
+  renderFriends();
+};
 
 /* ---- Erreurs lisibles ---- */
 function err(e){
@@ -498,7 +739,7 @@ function err(e){
 }
 
 /* ---- Init ---- */
-renderGames(); renderStakes();
+renderGames(); renderStakes(); renderFriends();
 window.addEventListener("load",()=>{ const eth=window.ethereum||(window.phantom&&window.phantom.ethereum); if(eth&&eth.selectedAddress) connect(); else $("walletTxt").textContent="Connecter"; });
 </script>
 </body>
