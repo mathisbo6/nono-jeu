@@ -282,6 +282,7 @@
         <button class="btn sec" id="abandonBtn">Abandonner</button>
         <button class="btn sec" id="timeoutBtn">Réclamer forfait</button>
       </div>
+      <button class="btn wide" id="cancelBtn" style="display:none">Fermer la table et récupérer ma mise</button>
       <div class="hint" id="playHint" style="text-align:center"></div>
       <button class="back" id="leaveGame" style="width:100%;text-align:center;margin-top:8px">Quitter l'affichage (la partie reste en cours)</button>
     </div>
@@ -360,6 +361,7 @@ const GUI=["function deposit(uint256) returns(uint256)","function withdraw(uint2
 const MORP=[
  "function createTable(uint256,bool) returns(uint256)",
  "function joinTable(uint256)","function joinPublic(uint256) returns(uint256)",
+ "function cancelTable(uint256)",
  "function play(uint256,uint8)","function abandon(uint256)","function claimTimeout(uint256)",
  "function getTable(uint256) view returns(address playerX,address playerO,uint256 stake,bool isPrivate,uint8 status,uint8[9] board,uint8 movesPlayed,bool xToMove,uint40 lastMoveTime,address winner)",
  "function nextTableId() view returns(uint256)",
@@ -419,6 +421,24 @@ function renderGames(){
 }
 function openMorpion(){ show("games"); document.querySelectorAll(".view").forEach(x=>x.classList.remove("active")); $("view-morpion").classList.add("active"); if($("lobbyChoice")){ lobbyView("choice"); $("lobby").style.display="block"; $("gameArea").style.display="none"; } }
 $("backFromMorpion").onclick=()=>{ stopPoll(); show("games"); };
+
+/* Cherche sur la chaine si le joueur a deja une table active (ouverte ou en cours).
+   Renvoie l'identifiant, ou null. Parcourt les tables les plus recentes. */
+async function findMyActiveTable(){
+  if(!me) return null;
+  try{
+    const next=await morpion.nextTableId();
+    const mine=me.toLowerCase();
+    const stop = next-60n > 1n ? next-60n : 1n;
+    for(let id=next-1n; id>=stop; id--){
+      const t=await morpion.getTable(id);
+      const st=Number(t.status);
+      if(st!==0 && st!==1) continue;
+      if(t.playerX.toLowerCase()===mine || t.playerO.toLowerCase()===mine) return id;
+    }
+  }catch(e){}
+  return null;
+}
 
 /* Sous-ecrans du lobby : choix / creer / rejoindre */
 function refreshResume(){
@@ -512,25 +532,31 @@ async function quickMatch(){
   const h=$("quickHint");
   try{
     const stakeWei=ethers.parseUnits(String(selStake),18);
+    showLoading("Vérification…");
+    const deja=await findMyActiveTable();
+    if(deja!==null){ hideLoading(); dejaEnPartie(deja); return; }
     await ensureApproved(selStake);
-    // 1) Tentative ATOMIQUE : le contrat cherche ET rejoint en une seule operation.
-    //    Impossible que deux joueurs se croisent sans se voir.
+    // 1) Sonde GRATUITE : le contrat nous dit s'il existe une table a rejoindre.
+    //    (staticCall n'envoie aucune transaction et ne coute pas de gas)
     showLoading("Recherche d'une table…");
-    try{
-      const t=await morpion.joinPublic(stakeWei);
-      showLoading("Table trouvée — on te place…");
-      const rc=await t.wait();
-      let id=null;
-      for(const l of rc.logs){try{const p=morpion.interface.parseLog(l);if(p&&p.name==="TableJoined"){id=p.args.tableId;break;}}catch(e){}}
-      if(id!==null){ enterTable(id); h.textContent=""; return; }
-      throw new Error("joined-unknown-id");
-    }catch(e){
-      const m=(e&&(e.reason||e.shortMessage||e.message))||String(e);
-      if(/user rejected|denied/i.test(m)){ h.textContent="Transaction annulée."; return; }
-      if(!/NoOpenTable/i.test(m)) throw e;   // vraie erreur : on remonte
-      // sinon : aucune table libre, on enchaine sur la creation
+    let peutRejoindre=true;
+    try{ await morpion.joinPublic.staticCall(stakeWei); }catch(e){ peutRejoindre=false; }
+    if(peutRejoindre){
+      try{
+        const t=await morpion.joinPublic(stakeWei);
+        showLoading("Table trouvée — on te place…");
+        const rc=await t.wait();
+        let id=null;
+        for(const l of rc.logs){try{const p=morpion.interface.parseLog(l);if(p&&p.name==="TableJoined"){id=p.args.tableId;break;}}catch(e){}}
+        if(id===null) id=await findMyActiveTable();
+        if(id!==null){ enterTable(id); h.textContent=""; return; }
+      }catch(e){
+        const m=(e&&(e.reason||e.shortMessage||e.message))||String(e);
+        if(/user rejected|denied/i.test(m)){ h.textContent="Transaction annulée."; return; }
+        // quelqu'un nous a double dans la course : on retombe sur la creation
+      }
     }
-    // 2) Aucune table libre a ce palier : on en cree une.
+    // 2) Aucune table libre a ce palier : on en cree une (publique).
     showLoading("Aucune table libre — création…");
     const t=await morpion.createTable(stakeWei,false); const rc=await t.wait();
     let id=null;
@@ -543,12 +569,23 @@ async function quickMatch(){
   finally{ hideLoading(); }
 }
 
+/* Message commun : une seule partie a la fois */
+function dejaEnPartie(id){
+  toast("Tu as déjà la table nº"+id+" en cours — termine-la d'abord.");
+  localStorage.setItem(lsTable(),id.toString());
+  refreshResume();
+  try{ resumeTable(id); }catch(e){}
+}
+
 /* ---- Créer / rejoindre ---- */
 async function createTable(isPriv,stakeArg){
   if(!me){toast("Connecte ton wallet.");return;}
   const h=$("createHint");
   const stakeNodc=(stakeArg!=null)?stakeArg:selStake;
   try{
+    showLoading("Vérification…");
+    const deja=await findMyActiveTable();
+    if(deja!==null){ hideLoading(); dejaEnPartie(deja); return; }
     await ensureApproved(stakeNodc);
     showLoading(isPriv?"Création de ta table privée…":"Création de ta table…");
     const t=await morpion.createTable(ethers.parseUnits(String(stakeNodc),18),isPriv);
@@ -680,6 +717,8 @@ async function refreshGame(){
     const playing=st===1&&(iX||iO);
     $("abandonBtn").style.display=playing?"":"none";
     $("timeoutBtn").style.display=playing?"":"none";
+    // Fermer la table : seulement le createur, et seulement tant que personne n'a rejoint
+    $("cancelBtn").style.display=(st===0&&iX)?"":"none";
   }catch(e){ $("playHint").textContent=err(e); }
 }
 async function playCell(i){
@@ -688,6 +727,17 @@ async function playCell(i){
 }
 $("abandonBtn").onclick=async()=>{ try{const t=await morpion.abandon(curTable);await t.wait();toast("Partie abandonnée.");refreshGame();}catch(e){$("playHint").textContent=err(e);} };
 $("timeoutBtn").onclick=async()=>{ try{const t=await morpion.claimTimeout(curTable);await t.wait();toast("Forfait réclamé.");refreshGame();}catch(e){$("playHint").textContent=err(e);} };
+$("cancelBtn").onclick=async()=>{
+  try{
+    showLoading("Fermeture de la table et remboursement…");
+    const t=await morpion.cancelTable(curTable); await t.wait();
+    stopPoll(); localStorage.removeItem(lsTable());
+    toast("Table fermée — ta mise t'a été rendue.");
+    await refreshBal();
+    $("gameArea").style.display="none"; $("lobby").style.display="block"; lobbyView("choice"); show("games");
+  }catch(e){ $("playHint").textContent=err(e); }
+  finally{ hideLoading(); }
+};
 
 /* ---- Profil ---- */
 function updateProfile(){
