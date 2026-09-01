@@ -355,7 +355,7 @@ function renderBoard(cells, canPlay){
     const d=document.createElement("div");
     d.className="cell"+(v==1?" x taken":v==2?" o taken":"");
     d.textContent = v==1?"✕":v==2?"◯":"";
-    if(v==0 && canPlay){ d.onclick=()=>playCell(i); } else { d.classList.add(v==0?"":"taken"); }
+    if(v==0 && canPlay){ d.onclick=()=>playCell(i); }
     b.appendChild(d);
   });
 }
