@@ -119,6 +119,11 @@
   .stake small{display:block;font-size:10px;color:var(--txt-dim);font-weight:700}
 
   .status-bar{text-align:center;font-size:16px;font-weight:800;margin:8px 0 14px;min-height:24px}
+  .table-head{display:flex;align-items:center;justify-content:center;gap:10px;flex-wrap:wrap;background:var(--bg-2);border:1px solid var(--line);border-radius:14px;padding:10px 14px;margin-bottom:10px}
+  .table-head .tno{font-size:17px;font-weight:900;color:var(--amber)}
+  .table-head .tinfo{font-size:13px;font-weight:700;color:var(--txt-dim)}
+  .table-head .copy{background:var(--bg-3);color:var(--txt);font-size:12px;font-weight:800;padding:6px 12px;border-radius:10px}
+  @media (hover:hover){ .table-head .copy:hover{background:var(--amber);color:#141a2e} }
   .status-bar .x{color:var(--x)} .status-bar .o{color:var(--o)}
   .board{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;width:min(300px,78vw);margin:0 auto 16px}
   .cell{aspect-ratio:1;background:var(--bg-3);border-radius:16px;display:flex;align-items:center;justify-content:center;font-size:46px;font-weight:900;transition:background .12s,transform .06s}
@@ -206,6 +211,10 @@
     <div id="lobby">
       <!-- Ecran de choix -->
       <div id="lobbyChoice">
+        <button class="menu-item accent" id="resumeBanner" style="display:none;margin-bottom:8px">
+          <span class="mi-title" id="resumeTitle">Reprendre ma partie</span>
+          <span class="mi-sub">Tu as une table en cours — clique pour y revenir</span>
+        </button>
         <button class="menu-item" id="goCreate" style="margin-bottom:8px">
           <span class="mi-title">Créer une partie</span>
           <span class="mi-sub">Choisis ta mise et invite un adversaire</span>
@@ -262,6 +271,11 @@
       </div>
     </div>
     <div id="gameArea" style="display:none">
+      <div class="table-head">
+        <span class="tno" id="tableNo">Table nº —</span>
+        <span class="tinfo" id="tableInfo"></span>
+        <button class="copy" id="copyTable">Copier le nº</button>
+      </div>
       <div class="status-bar" id="statusBar"></div>
       <div class="board" id="board"></div>
       <div class="row-btns">
@@ -404,7 +418,14 @@ function openMorpion(){ show("games"); document.querySelectorAll(".view").forEac
 $("backFromMorpion").onclick=()=>{ stopPoll(); show("games"); };
 
 /* Sous-ecrans du lobby : choix / creer / rejoindre */
+function refreshResume(){
+  const b=$("resumeBanner"); if(!b) return;
+  const saved=localStorage.getItem(LS_TABLE);
+  if(saved){ $("resumeTitle").textContent="Reprendre la table nº "+saved; b.style.display=""; }
+  else b.style.display="none";
+}
 function lobbyView(which){
+  if(which==="choice") refreshResume();
   $("lobbyChoice").style.display = which==="choice"?"block":"none";
   $("lobbyCreate").style.display = which==="create"?"block":"none";
   $("lobbyJoin").style.display   = which==="join"?"block":"none";
@@ -578,6 +599,8 @@ $("joinPubBtn").onclick=joinPub;
 function enterTable(id){
   curTable=BigInt(id);
   localStorage.setItem(LS_TABLE,curTable.toString());
+  $("tableNo").textContent="Table nº "+curTable;
+  $("tableInfo").textContent="";
   $("lobby").style.display="none";
   $("gameArea").style.display="block";
   renderBoard(Array(9).fill(0),false);
@@ -590,7 +613,21 @@ async function resumeTable(id){
   if(st===0||st===1){ openMorpion(); enterTable(id); }
   else localStorage.removeItem(LS_TABLE);
 }
-$("leaveGame").onclick=()=>{ stopPoll(); $("gameArea").style.display="none"; $("lobby").style.display="block"; };
+$("resumeBanner").onclick=async()=>{
+  const saved=localStorage.getItem(LS_TABLE); if(!saved) return;
+  if(!me){ toast("Connecte ton wallet."); return; }
+  try{ showLoading("Reprise de la table nº "+saved+"…"); await resumeTable(BigInt(saved)); }
+  catch(e){ toast(err(e)); localStorage.removeItem(LS_TABLE); refreshResume(); }
+  finally{ hideLoading(); }
+};
+$("leaveGame").onclick=()=>{ stopPoll(); $("gameArea").style.display="none"; $("lobby").style.display="block"; refreshResume(); };
+$("copyTable").onclick=async()=>{
+  if(curTable===null) return;
+  const v=curTable.toString();
+  try{ await navigator.clipboard.writeText(v); }
+  catch(e){ const ta=document.createElement("textarea"); ta.value=v; document.body.appendChild(ta); ta.select(); try{document.execCommand("copy");}catch(_){} ta.remove(); }
+  toast("Numéro de table copié : "+v);
+};
 
 function startPoll(){ stopPoll(); poll=setInterval(refreshGame,5000); }
 function stopPoll(){ if(poll){clearInterval(poll);poll=null;} }
@@ -616,7 +653,9 @@ async function refreshGame(){
     const myTurn=st===1&&((t.xToMove&&iX)||(!t.xToMove&&iO));
     renderBoard(board,myTurn);
     const sb=$("statusBar");
-    if(st===0) sb.textContent="En attente d'un adversaire… (table nº"+curTable+")";
+    $("tableNo").textContent="Table nº "+curTable;
+    $("tableInfo").textContent="· "+fmt(f18(t.stake))+" NODC · "+(t.isPrivate?"privée":"publique");
+    if(st===0) sb.textContent="En attente d'un adversaire…";
     else if(st===1){
       const who=t.xToMove?'<span class="x">✕</span>':'<span class="o">◯</span>';
       sb.innerHTML=myTurn?`À toi de jouer ${who}`:`Au tour de ${who}`;
