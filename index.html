@@ -2,443 +2,504 @@
 <html lang="fr">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>NONO — Morpion</title>
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+<title>NONO</title>
 <style>
   :root{
-    --ink:#1c2321;        /* encre sombre, presque noir vert */
-    --paper:#f5f1e8;      /* papier crème chaud */
-    --paper-2:#efe9db;
-    --line:#d8cfbc;       /* trait crayon clair */
-    --x:#c8553d;          /* terre cuite pour X */
-    --o:#3d6b8c;          /* bleu ardoise pour O */
-    --gold:#b78a3e;       /* accent doré discret */
-    --good:#4f7d5b;
-    --shadow: 0 2px 0 var(--line);
+    --bg:#141a2e;          /* bleu nuit */
+    --bg-2:#1d2540;        /* panneaux */
+    --bg-3:#28315a;        /* éléments surélevés */
+    --txt:#eef1fb;
+    --txt-dim:#9aa3c7;
+    --line:#2f3a63;
+    --amber:#f5b74e;       /* accent doré/ambre */
+    --x:#ff6b5e;           /* corail pour X */
+    --o:#4ec4e0;           /* cyan pour O */
+    --green:#57cc8a;
+    --violet:#8b7cf0;
+    --pink:#f078b0;
+    --radius:20px;
   }
-  *{box-sizing:border-box}
-  html,body{margin:0}
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  html,body{margin:0;height:100%}
   body{
-    background:var(--paper);
-    color:var(--ink);
-    font-family:"Iowan Old Style","Palatino Linotype",Palatino,Georgia,serif;
-    line-height:1.5;
-    -webkit-font-smoothing:antialiased;
+    background:var(--bg);color:var(--txt);
+    font-family:"Nunito","Quicksand",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+    display:flex;flex-direction:column;min-height:100%;
   }
-  .wrap{max-width:760px;margin:0 auto;padding:28px 20px 80px}
-  header.top{display:flex;align-items:baseline;justify-content:space-between;flex-wrap:wrap;gap:12px;border-bottom:2px solid var(--ink);padding-bottom:14px;margin-bottom:26px}
-  .brand{font-size:34px;font-weight:700;letter-spacing:-0.5px}
-  .brand small{display:block;font-size:13px;font-weight:400;letter-spacing:2px;color:var(--gold);margin-top:2px}
-  .wallet{font-size:13px;text-align:right}
-  .wallet .addr{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;background:var(--paper-2);padding:3px 8px;border-radius:4px;border:1px solid var(--line)}
-  button{
-    font-family:inherit;font-size:15px;cursor:pointer;
-    background:var(--ink);color:var(--paper);border:none;border-radius:6px;
-    padding:9px 16px;transition:transform .05s ease, opacity .15s;
-  }
-  button:hover{opacity:.92}
-  button:active{transform:translateY(1px)}
-  button.ghost{background:transparent;color:var(--ink);border:1.5px solid var(--ink)}
-  button:disabled{opacity:.4;cursor:not-allowed}
-  .card{background:var(--paper-2);border:1px solid var(--line);border-radius:10px;padding:20px;margin-bottom:22px}
-  .card h2{margin:0 0 14px;font-size:19px;display:flex;align-items:center;gap:10px}
-  .card h2 .num{font-size:13px;color:var(--paper);background:var(--gold);width:24px;height:24px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;font-weight:700}
-  .row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
-  .row + .row{margin-top:12px}
-  label{font-size:14px;color:#5c6360}
-  input,select{font-family:inherit;font-size:15px;padding:8px 10px;border:1px solid var(--line);border-radius:6px;background:var(--paper);color:var(--ink);min-width:90px}
-  .balances{display:flex;gap:24px;flex-wrap:wrap;font-size:15px}
-  .balances b{font-size:22px;display:block;font-weight:700}
-  .muted{color:#7a807d;font-size:13px}
-  .hint{font-size:13px;color:#7a807d;margin-top:8px;min-height:18px}
-  /* grille morpion */
-  .board{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;width:min(320px,80vw);margin:18px auto}
-  .cell{
-    aspect-ratio:1;background:var(--paper);border:1px solid var(--line);border-radius:8px;
-    display:flex;align-items:center;justify-content:center;font-size:52px;font-weight:700;
-    cursor:pointer;user-select:none;transition:background .12s;
-  }
-  .cell:hover:not(.taken){background:#fff}
-  .cell.taken{cursor:default}
-  .cell.x{color:var(--x)}
-  .cell.o{color:var(--o)}
-  .status{text-align:center;font-size:17px;margin:6px 0 2px;min-height:24px}
-  .status .turn-x{color:var(--x);font-weight:700}
-  .status .turn-o{color:var(--o);font-weight:700}
-  .toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%);background:var(--ink);color:var(--paper);padding:12px 20px;border-radius:8px;font-size:14px;max-width:90vw;box-shadow:0 6px 20px rgba(0,0,0,.2);opacity:0;pointer-events:none;transition:opacity .2s}
-  .toast.show{opacity:1}
-  .pill{font-size:12px;padding:2px 9px;border-radius:20px;border:1px solid var(--line);background:var(--paper)}
-  .disconnected{opacity:.45;pointer-events:none}
-  a{color:var(--o)}
-  .foot{font-size:12px;color:#9aa09c;text-align:center;margin-top:30px;line-height:1.7}
-  .foot code{font-family:ui-monospace,monospace;font-size:11px}
+  h1,h2,h3{font-weight:800;margin:0}
+  button{font-family:inherit;cursor:pointer;border:none}
+  .app{max-width:520px;margin:0 auto;width:100%;flex:1;display:flex;flex-direction:column;padding:0 16px 96px}
+
+  /* Top bar */
+  .top{display:flex;align-items:center;justify-content:space-between;padding:18px 2px 14px;position:sticky;top:0;background:linear-gradient(var(--bg) 70%,transparent);z-index:5}
+  .logo{font-size:26px;font-weight:900;letter-spacing:.5px}
+  .logo span{color:var(--amber)}
+  .wallet-chip{background:var(--bg-3);border-radius:999px;padding:8px 14px;font-size:13px;font-weight:700;display:flex;align-items:center;gap:8px;border:none;color:var(--txt)}
+  .wallet-chip .dot{width:8px;height:8px;border-radius:50%;background:var(--txt-dim)}
+  .wallet-chip.on .dot{background:var(--green)}
+
+  /* Balance strip */
+  .bal{display:flex;gap:10px;margin-bottom:18px}
+  .bal .b{flex:1;background:var(--bg-2);border-radius:16px;padding:12px 14px}
+  .bal .b .k{font-size:12px;color:var(--txt-dim);font-weight:700}
+  .bal .b .v{font-size:20px;font-weight:800;margin-top:2px}
+  .bal .b .v small{font-size:12px;color:var(--txt-dim);font-weight:700}
+
+  /* Views */
+  .view{display:none;animation:fade .25s ease}
+  .view.active{display:block}
+  @keyframes fade{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+
+  .h-title{font-size:22px;margin:6px 2px 16px}
+
+  /* Game cards grid */
+  .games{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+  .game-card{border-radius:var(--radius);padding:18px 16px;min-height:132px;display:flex;flex-direction:column;justify-content:space-between;position:relative;overflow:hidden;color:#141a2e;text-align:left}
+  .game-card .ico{font-size:40px;line-height:1}
+  .game-card .nm{font-size:18px;font-weight:900}
+  .game-card .sub{font-size:12px;font-weight:700;opacity:.7}
+  .game-card.locked{background:var(--bg-2);color:var(--txt-dim);cursor:not-allowed}
+  .game-card.locked .badge{position:absolute;top:12px;right:12px;background:var(--bg-3);color:var(--txt-dim);font-size:10px;font-weight:800;padding:4px 8px;border-radius:999px}
+  .g-morpion{background:linear-gradient(140deg,#ffd27a,#f5b74e)}
+  .g-pfc{background:linear-gradient(140deg,#9ce0b4,#57cc8a)}
+  .g-des{background:linear-gradient(140deg,#a9c4ff,#7c9cf0)}
+  .g-uno{background:linear-gradient(140deg,#ffb0d4,#f078b0)}
+  .g-poker{background:linear-gradient(140deg,#c3b6ff,#8b7cf0)}
+
+  /* Generic card */
+  .card{background:var(--bg-2);border-radius:var(--radius);padding:18px;margin-bottom:16px}
+  .card h3{font-size:16px;margin-bottom:14px}
+  .field{display:flex;align-items:center;gap:10px;margin-bottom:12px;flex-wrap:wrap}
+  .field label{font-size:14px;color:var(--txt-dim);font-weight:700;min-width:64px}
+  input,select{font-family:inherit;font-size:16px;font-weight:700;padding:11px 13px;border-radius:12px;border:1.5px solid var(--line);background:var(--bg-3);color:var(--txt);flex:1;min-width:80px}
+  input:focus,select:focus{outline:none;border-color:var(--amber)}
+  .btn{background:var(--amber);color:#141a2e;font-weight:800;font-size:15px;padding:12px 18px;border-radius:12px;transition:transform .06s,filter .15s}
+  .btn:active{transform:scale(.97)}
+  .btn:disabled{opacity:.4}
+  .btn.sec{background:var(--bg-3);color:var(--txt)}
+  .btn.wide{width:100%;padding:14px}
+  .btn.x{background:var(--x);color:#fff}
+  .row-btns{display:flex;gap:10px}
+  .row-btns .btn{flex:1}
+  .hint{font-size:13px;color:var(--txt-dim);margin-top:6px;min-height:18px;line-height:1.4}
+
+  /* Lobby / game */
+  .back{background:none;color:var(--txt-dim);font-weight:800;font-size:14px;padding:6px 0;margin:2px 0 10px}
+  .stakes{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px}
+  .stake{flex:1;min-width:60px;background:var(--bg-3);border:2px solid transparent;border-radius:14px;padding:12px 4px;text-align:center;font-weight:800;color:var(--txt)}
+  .stake.sel{border-color:var(--amber);color:var(--amber)}
+  .stake small{display:block;font-size:10px;color:var(--txt-dim);font-weight:700}
+
+  .status-bar{text-align:center;font-size:16px;font-weight:800;margin:8px 0 14px;min-height:24px}
+  .status-bar .x{color:var(--x)} .status-bar .o{color:var(--o)}
+  .board{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;width:min(300px,78vw);margin:0 auto 16px}
+  .cell{aspect-ratio:1;background:var(--bg-3);border-radius:16px;display:flex;align-items:center;justify-content:center;font-size:46px;font-weight:900;transition:background .12s,transform .06s}
+  .cell.free.myturn{cursor:pointer}
+  .cell.free.myturn:active{transform:scale(.95);background:#33406f}
+  .cell.x{color:var(--x)} .cell.o{color:var(--o)}
+
+  /* History */
+  .hist-item{background:var(--bg-2);border-radius:14px;padding:14px;margin-bottom:10px;display:flex;align-items:center;gap:12px}
+  .hist-item .ico{font-size:26px}
+  .hist-item .mid{flex:1}
+  .hist-item .mid .t{font-weight:800;font-size:15px}
+  .hist-item .mid .s{font-size:12px;color:var(--txt-dim);font-weight:700}
+  .hist-item .res{font-weight:900;font-size:14px}
+  .res.win{color:var(--green)} .res.lose{color:var(--x)} .res.draw{color:var(--txt-dim)}
+  .empty{text-align:center;color:var(--txt-dim);padding:40px 20px;font-weight:700}
+
+  /* Bottom nav */
+  .nav{position:fixed;bottom:0;left:0;right:0;background:var(--bg-2);border-top:1px solid var(--line);display:flex;justify-content:space-around;padding:8px 0 max(8px,env(safe-area-inset-bottom));z-index:10}
+  .nav button{background:none;color:var(--txt-dim);font-size:11px;font-weight:800;display:flex;flex-direction:column;align-items:center;gap:3px;padding:6px 18px;border-radius:12px}
+  .nav button .ni{font-size:22px}
+  .nav button.on{color:var(--amber)}
+
+  /* Toast */
+  .toast{position:fixed;left:50%;bottom:88px;transform:translateX(-50%) translateY(20px);background:var(--bg-3);color:var(--txt);padding:13px 20px;border-radius:14px;font-weight:700;font-size:14px;max-width:90vw;box-shadow:0 10px 30px rgba(0,0,0,.4);opacity:0;pointer-events:none;transition:.25s;z-index:20}
+  .toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+
+  .spinner{display:inline-block;width:14px;height:14px;border:2px solid var(--txt-dim);border-top-color:var(--amber);border-radius:50%;animation:spin .7s linear infinite;vertical-align:-2px;margin-right:6px}
+  @keyframes spin{to{transform:rotate(360deg)}}
+  .net-warn{background:#4a2233;color:#ffb3b3;border-radius:12px;padding:10px 14px;font-size:13px;font-weight:700;margin-bottom:14px;display:none}
 </style>
 </head>
 <body>
-<div class="wrap">
-  <header class="top">
-    <div class="brand">NONO<small>MORPION À ENJEU</small></div>
-    <div class="wallet">
-      <div id="walletState">Pas connecté</div>
-      <button id="connectBtn" style="margin-top:6px">Connecter Phantom</button>
-    </div>
-  </header>
-
-  <div class="balances card" id="balancesCard">
-    <div>
-      <label>Tes NODC</label>
-      <b id="nodcBal">—</b>
-    </div>
-    <div>
-      <label>Tes USDC (test)</label>
-      <b id="usdcBal">—</b>
-    </div>
-    <div>
-      <label>Réseau</label>
-      <b id="netState" style="font-size:15px">—</b>
-    </div>
+<div class="app">
+  <div class="top">
+    <div class="logo">NO<span>NO</span></div>
+    <button class="wallet-chip" id="walletChip"><span class="dot"></span><span id="walletTxt">Connexion…</span></button>
   </div>
 
-  <section class="card" id="guichetCard">
-    <h2><span class="num">1</span> Guichet — changer des USDC en NODC</h2>
-    <div class="row">
-      <label>Déposer</label>
-      <input id="depAmt" type="number" min="1" step="1" value="5" style="width:90px"> <span class="muted">USDC</span>
-      <button id="approveBtn" class="ghost">1. Autoriser</button>
-      <button id="depositBtn">2. Déposer</button>
-    </div>
-    <div class="row">
-      <label>Retirer</label>
-      <input id="wdAmt" type="number" min="1" step="1" value="50" style="width:90px"> <span class="muted">NODC</span>
-      <button id="withdrawBtn" class="ghost">Retirer</button>
-    </div>
-    <div class="hint" id="guichetHint">Le dépôt se fait en deux temps : autoriser le Guichet à prendre tes USDC, puis déposer.</div>
-  </section>
+  <div class="net-warn" id="netWarn">Passe Phantom sur Base Sepolia (mode Testnet) pour jouer.</div>
 
-  <section class="card" id="playCard">
-    <h2><span class="num">2</span> Jouer</h2>
-    <div class="row">
-      <label>Mise</label>
-      <select id="stakeSel">
-        <option value="10">10 NODC</option>
-        <option value="50">50 NODC</option>
-        <option value="100" selected>100 NODC</option>
-        <option value="500">500 NODC</option>
-        <option value="1000">1000 NODC</option>
-      </select>
-      <button id="createPrivBtn">Créer une table privée</button>
-      <button id="createPubBtn" class="ghost">Créer une table publique</button>
-    </div>
-    <div class="row">
-      <label>Rejoindre nº</label>
-      <input id="joinId" type="number" min="1" step="1" placeholder="identifiant" style="width:120px">
-      <button id="joinBtn">Rejoindre</button>
-      <span class="muted">|</span>
-      <button id="joinPubBtn" class="ghost">Rejoindre une partie publique</button>
-    </div>
-    <div class="hint" id="tableHint"></div>
+  <div class="bal">
+    <div class="b"><div class="k">NODC</div><div class="v" id="nodcBal">—</div></div>
+    <div class="b"><div class="k">USDC test</div><div class="v" id="usdcBal">—</div></div>
+  </div>
 
+  <!-- VUE JEUX -->
+  <div class="view active" id="view-games">
+    <h2 class="h-title">Choisis un jeu</h2>
+    <div class="games" id="gamesGrid"></div>
+  </div>
+
+  <!-- VUE LOBBY MORPION -->
+  <div class="view" id="view-morpion">
+    <button class="back" id="backFromMorpion">← Retour aux jeux</button>
+    <div id="lobby">
+      <div class="card">
+        <h3>Nouvelle partie de morpion</h3>
+        <div class="stakes" id="stakes"></div>
+        <div class="row-btns">
+          <button class="btn" id="createPrivBtn">Table privée</button>
+          <button class="btn sec" id="createPubBtn">Table publique</button>
+        </div>
+        <div class="hint" id="createHint"></div>
+      </div>
+      <div class="card">
+        <h3>Rejoindre</h3>
+        <div class="field">
+          <input id="joinId" type="number" min="1" placeholder="Nº de table">
+          <button class="btn" id="joinBtn">Rejoindre</button>
+        </div>
+        <button class="btn sec wide" id="joinPubBtn">Rejoindre une partie publique</button>
+        <div class="hint" id="joinHint"></div>
+      </div>
+    </div>
     <div id="gameArea" style="display:none">
-      <div class="status" id="gameStatus"></div>
+      <div class="status-bar" id="statusBar"></div>
       <div class="board" id="board"></div>
-      <div class="row" style="justify-content:center">
-        <button id="refreshBtn" class="ghost">Rafraîchir</button>
-        <button id="abandonBtn" class="ghost">Abandonner</button>
-        <button id="timeoutBtn" class="ghost">Réclamer forfait</button>
+      <div class="row-btns">
+        <button class="btn sec" id="abandonBtn">Abandonner</button>
+        <button class="btn sec" id="timeoutBtn">Réclamer forfait</button>
       </div>
       <div class="hint" id="playHint" style="text-align:center"></div>
+      <button class="back" id="leaveGame" style="width:100%;text-align:center;margin-top:8px">Quitter l'affichage (la partie reste en cours)</button>
     </div>
-  </section>
-
-  <div class="foot">
-    NODC <code id="fNodc"></code> · Guichet <code id="fGuichet"></code> · Morpion <code id="fMorpion"></code><br>
-    Base Sepolia (testnet) — aucune valeur réelle.
   </div>
+
+  <!-- VUE PORTEFEUILLE -->
+  <div class="view" id="view-wallet">
+    <h2 class="h-title">Portefeuille</h2>
+    <div class="card">
+      <h3>Déposer — USDC → NODC</h3>
+      <div class="field"><label>Montant</label><input id="depAmt" type="number" min="1" value="5"><span style="color:var(--txt-dim);font-weight:700">USDC</span></div>
+      <div class="row-btns">
+        <button class="btn sec" id="approveBtn">1. Autoriser</button>
+        <button class="btn" id="depositBtn">2. Déposer</button>
+      </div>
+      <div class="hint" id="depHint">10 NODC pour 1 USDC. Deux étapes : autoriser puis déposer.</div>
+    </div>
+    <div class="card">
+      <h3>Retirer — NODC → USDC</h3>
+      <div class="field"><label>Montant</label><input id="wdAmt" type="number" min="1" value="50"><span style="color:var(--txt-dim);font-weight:700">NODC</span></div>
+      <button class="btn wide" id="withdrawBtn">Retirer</button>
+      <div class="hint" id="wdHint">Frais de retrait : 0,5 %.</div>
+    </div>
+  </div>
+
+  <!-- VUE HISTORIQUE -->
+  <div class="view" id="view-history">
+    <h2 class="h-title">Historique</h2>
+    <div id="histList"><div class="empty">Connecte ton wallet pour voir tes parties.</div></div>
+  </div>
+</div>
+
+<div class="nav">
+  <button data-view="games" class="on"><span class="ni">🎮</span>Jeux</button>
+  <button data-view="wallet"><span class="ni">💰</span>Portefeuille</button>
+  <button data-view="history"><span class="ni">📜</span>Historique</button>
 </div>
 
 <div class="toast" id="toast"></div>
 
 <script src="https://cdn.jsdelivr.net/npm/ethers@6.13.2/dist/ethers.umd.min.js"></script>
 <script>
-/* ---------- Adresses (Base Sepolia) ---------- */
-const ADDR = {
-  nodc:    "0x9fEEe0b7D258F6531e0559782DBd4bD064BCfc1B",
-  usdc:    "0x036CbD53842c5426634e7929541eC2318f3dCF7e",
-  guichet: "0xB25c5332C1cA37098d733694D9a93ABaFDdA68b6",
-  morpion: "0x6A94DB83D28EeFDE194b7002C7B06b534Ea82a34",
+const ADDR={
+  nodc:"0x9fEEe0b7D258F6531e0559782DBd4bD064BCfc1B",
+  usdc:"0x036CbD53842c5426634e7929541eC2318f3dCF7e",
+  guichet:"0xB25c5332C1cA37098d733694D9a93ABaFDdA68b6",
+  morpion:"0x6A94DB83D28EeFDE194b7002C7B06b534Ea82a34",
 };
-const CHAIN_ID = 84532n;
-const CHAIN_HEX = "0x14a34";
-
-/* ---------- ABIs minimales ---------- */
-const ERC20_ABI = [
-  "function balanceOf(address) view returns (uint256)",
-  "function decimals() view returns (uint8)",
-  "function approve(address spender,uint256 amount) returns (bool)",
-  "function allowance(address owner,address spender) view returns (uint256)"
+const CHAIN_ID=84532n, CHAIN_HEX="0x14a34";
+const ERC20=["function balanceOf(address) view returns(uint256)","function approve(address,uint256) returns(bool)","function allowance(address,address) view returns(uint256)"];
+const GUI=["function deposit(uint256) returns(uint256)","function withdraw(uint256) returns(uint256)"];
+const MORP=[
+ "function createTable(uint256,bool) returns(uint256)",
+ "function joinTable(uint256)","function joinPublic(uint256) returns(uint256)",
+ "function play(uint256,uint8)","function abandon(uint256)","function claimTimeout(uint256)",
+ "function getTable(uint256) view returns(address playerX,address playerO,uint256 stake,bool isPrivate,uint8 status,uint8[9] board,uint8 movesPlayed,bool xToMove,uint40 lastMoveTime,address winner)",
+ "function nextTableId() view returns(uint256)",
+ "function openTablesFor(uint256) view returns(uint256[])",
+ "event TableCreated(uint256 indexed tableId,address indexed creator,uint256 stake,bool isPrivate)",
+ "event GameWon(uint256 indexed tableId,address indexed winner,uint256 payout)",
+ "event GameDrawn(uint256 indexed tableId,uint256 refundEach)"
 ];
-const GUICHET_ABI = [
-  "function deposit(uint256 usdcIn) returns (uint256)",
-  "function withdraw(uint256 nodcIn) returns (uint256)",
-  "function rate() view returns (uint256)"
+const GAMES=[
+ {id:"morpion",nm:"Morpion",ico:"⭕",sub:"2 joueurs",cls:"g-morpion",on:true},
+ {id:"pfc",nm:"Pierre-Feuille-Ciseaux",ico:"✊",sub:"Bientôt",cls:"g-pfc",on:false},
+ {id:"des",nm:"Dés",ico:"🎲",sub:"Bientôt",cls:"g-des",on:false},
+ {id:"uno",nm:"Uno",ico:"🃏",sub:"Bientôt",cls:"g-uno",on:false},
+ {id:"poker",nm:"Poker",ico:"♠️",sub:"Bientôt",cls:"g-poker",on:false},
 ];
-const MORPION_ABI = [
-  "function createTable(uint256 stake,bool isPrivate) returns (uint256)",
-  "function joinTable(uint256 tableId)",
-  "function joinPublic(uint256 stake) returns (uint256)",
-  "function cancelTable(uint256 tableId)",
-  "function play(uint256 tableId,uint8 cell)",
-  "function abandon(uint256 tableId)",
-  "function claimTimeout(uint256 tableId)",
-  "function getTable(uint256 tableId) view returns (address playerX,address playerO,uint256 stake,bool isPrivate,uint8 status,uint8[9] board,uint8 movesPlayed,bool xToMove,uint40 lastMoveTime,address winner)",
-  "function nextTableId() view returns (uint256)",
-  "event TableCreated(uint256 indexed tableId,address indexed creator,uint256 stake,bool isPrivate)"
-];
-const STATUS = ["Ouverte","En cours","Réglée","Annulée"];
+const STAKES=[10,50,100,500,1000];
 
-let provider, signer, me;
-let nodc, usdc, guichet, morpion;
-let currentTable = null;
-let pollTimer = null;
+let provider,signer,me,nodc,usdc,guichet,morpion;
+let selStake=100, curTable=null, poll=null;
+const $=id=>document.getElementById(id);
+const f18=v=>Number(ethers.formatUnits(v,18));
+const fmt=n=>n.toLocaleString('fr-FR',{maximumFractionDigits:2});
+function toast(m){const t=$("toast");t.textContent=m;t.classList.add("show");clearTimeout(t._h);t._h=setTimeout(()=>t.classList.remove("show"),3200);}
+const LS_TABLE="nono_active_table";
 
-const $ = id => document.getElementById(id);
-function toast(msg){ const t=$("toast"); t.textContent=msg; t.classList.add("show"); clearTimeout(t._h); t._h=setTimeout(()=>t.classList.remove("show"),3500); }
-const f18 = v => Number(ethers.formatUnits(v,18));
-const fmt = n => n.toLocaleString('fr-FR',{maximumFractionDigits:2});
+/* ---- Navigation ---- */
+function show(v){
+  document.querySelectorAll(".view").forEach(x=>x.classList.remove("active"));
+  $("view-"+v).classList.add("active");
+  document.querySelectorAll(".nav button").forEach(b=>b.classList.toggle("on",b.dataset.view===v));
+  if(v==="history") loadHistory();
+}
+document.querySelectorAll(".nav button").forEach(b=>b.onclick=()=>show(b.dataset.view));
 
-$("fNodc").textContent = ADDR.nodc.slice(0,10)+"…";
-$("fGuichet").textContent = ADDR.guichet.slice(0,10)+"…";
-$("fMorpion").textContent = ADDR.morpion.slice(0,10)+"…";
+/* ---- Rendu grille de jeux ---- */
+function renderGames(){
+  const g=$("gamesGrid");g.innerHTML="";
+  GAMES.forEach(game=>{
+    const d=document.createElement(game.on?"button":"div");
+    d.className="game-card "+game.cls+(game.on?"":" locked");
+    d.innerHTML=`<div class="ico">${game.ico}</div><div><div class="nm">${game.nm}</div><div class="sub">${game.sub}</div></div>`+(game.on?"":`<div class="badge">BIENTÔT</div>`);
+    if(game.on) d.onclick=()=>openMorpion();
+    g.appendChild(d);
+  });
+}
+function openMorpion(){ show("games"); document.querySelectorAll(".view").forEach(x=>x.classList.remove("active")); $("view-morpion").classList.add("active"); }
+$("backFromMorpion").onclick=()=>{ stopPoll(); show("games"); };
 
-/* ---------- Connexion ---------- */
+/* ---- Connexion ---- */
 async function connect(){
-  const eth = window.ethereum || (window.phantom && window.phantom.ethereum);
-  if(!eth){ toast("Phantom introuvable. Installe l'extension et active le mode Testnet."); return; }
-  provider = new ethers.BrowserProvider(eth);
+  const eth=window.ethereum||(window.phantom&&window.phantom.ethereum);
+  if(!eth){toast("Installe Phantom et active le mode Testnet.");return;}
+  provider=new ethers.BrowserProvider(eth);
   await provider.send("eth_requestAccounts",[]);
-  const net = await provider.getNetwork();
-  $("netState").textContent = net.chainId===CHAIN_ID ? "Base Sepolia ✓" : ("Mauvais réseau ("+net.chainId+")");
+  const net=await provider.getNetwork();
   if(net.chainId!==CHAIN_ID){
-    try{ await eth.request({method:"wallet_switchEthereumChain",params:[{chainId:CHAIN_HEX}]}); location.reload(); return; }
-    catch(e){ toast("Passe Phantom sur Base Sepolia (mode Testnet)."); }
+    $("netWarn").style.display="block";
+    try{await eth.request({method:"wallet_switchEthereumChain",params:[{chainId:CHAIN_HEX}]});location.reload();return;}catch(e){}
+    return;
   }
-  signer = await provider.getSigner();
-  me = (await signer.getAddress());
-  nodc = new ethers.Contract(ADDR.nodc, ERC20_ABI, signer);
-  usdc = new ethers.Contract(ADDR.usdc, ERC20_ABI, signer);
-  guichet = new ethers.Contract(ADDR.guichet, GUICHET_ABI, signer);
-  morpion = new ethers.Contract(ADDR.morpion, MORPION_ABI, signer);
-  $("walletState").innerHTML = 'Connecté <span class="addr">'+me.slice(0,6)+"…"+me.slice(-4)+'</span>';
-  $("connectBtn").textContent = "Reconnecter";
-  await refreshBalances();
+  $("netWarn").style.display="none";
+  signer=await provider.getSigner(); me=await signer.getAddress();
+  nodc=new ethers.Contract(ADDR.nodc,ERC20,signer);
+  usdc=new ethers.Contract(ADDR.usdc,ERC20,signer);
+  guichet=new ethers.Contract(ADDR.guichet,GUI,signer);
+  morpion=new ethers.Contract(ADDR.morpion,MORP,signer);
+  const chip=$("walletChip");chip.classList.add("on");
+  $("walletTxt").textContent=me.slice(0,6)+"…"+me.slice(-4);
+  await refreshBal();
+  // reprise auto de partie en cours
+  const saved=localStorage.getItem(LS_TABLE);
+  if(saved){ try{ await resumeTable(BigInt(saved)); }catch(e){} }
+  // detecter changement de compte
+  eth.on&&eth.on("accountsChanged",()=>location.reload());
+  eth.on&&eth.on("chainChanged",()=>location.reload());
+}
+$("walletChip").onclick=connect;
+
+async function refreshBal(){
+  if(!me)return;
+  try{const[n,u]=await Promise.all([nodc.balanceOf(me),usdc.balanceOf(me)]);
+    $("nodcBal").innerHTML=fmt(f18(n));
+    $("usdcBal").innerHTML=fmt(Number(ethers.formatUnits(u,6)));
+  }catch(e){}
 }
 
-async function refreshBalances(){
-  if(!me) return;
-  try{
-    const [nb, ub] = await Promise.all([ nodc.balanceOf(me), usdc.balanceOf(me) ]);
-    $("nodcBal").textContent = fmt(f18(nb));
-    $("usdcBal").textContent = fmt(Number(ethers.formatUnits(ub,6)));
-  }catch(e){ /* silencieux */ }
+/* ---- Portefeuille ---- */
+async function tx(hintId,label,fn){
+  const h=$(hintId);
+  try{ h.innerHTML=`<span class="spinner"></span>${label} — confirme dans Phantom…`; const t=await fn(); await t.wait(); h.textContent="✓ "+label+" réussi."; refreshBal(); return true; }
+  catch(e){ h.textContent=err(e); return false; }
 }
+$("approveBtn").onclick=()=>tx("depHint","Autorisation",()=>usdc.approve(ADDR.guichet,ethers.parseUnits($("depAmt").value||"0",6)));
+$("depositBtn").onclick=()=>tx("depHint","Dépôt",()=>guichet.deposit(ethers.parseUnits($("depAmt").value||"0",6)));
+$("withdrawBtn").onclick=()=>tx("wdHint","Retrait",()=>guichet.withdraw(ethers.parseUnits($("wdAmt").value||"0",18)));
 
-/* ---------- Guichet ---------- */
-async function doApprove(){
-  try{
-    const amt = ethers.parseUnits($("depAmt").value||"0",6);
-    $("guichetHint").textContent = "Confirme l'autorisation dans Phantom…";
-    const tx = await usdc.approve(ADDR.guichet, amt);
-    await tx.wait();
-    $("guichetHint").textContent = "Autorisation faite. Tu peux déposer.";
-    toast("USDC autorisés ✓");
-  }catch(e){ $("guichetHint").textContent = err(e); }
-}
-async function doDeposit(){
-  try{
-    const amt = ethers.parseUnits($("depAmt").value||"0",6);
-    $("guichetHint").textContent = "Confirme le dépôt dans Phantom…";
-    const tx = await guichet.deposit(amt);
-    await tx.wait();
-    $("guichetHint").textContent = "Dépôt réussi. NODC crédités.";
-    toast("Dépôt réussi ✓");
-    refreshBalances();
-  }catch(e){ $("guichetHint").textContent = err(e); }
-}
-async function doWithdraw(){
-  try{
-    const amt = ethers.parseUnits($("wdAmt").value||"0",18);
-    $("guichetHint").textContent = "Confirme le retrait dans Phantom…";
-    const tx = await guichet.withdraw(amt);
-    await tx.wait();
-    $("guichetHint").textContent = "Retrait réussi. USDC rendus (moins 0,5 %).";
-    toast("Retrait réussi ✓");
-    refreshBalances();
-  }catch(e){ $("guichetHint").textContent = err(e); }
-}
-
-/* ---------- Jeu ---------- */
-async function ensureApprovedForStake(stakeNodc){
-  // le Morpion doit pouvoir prendre 'stake' NODC ; on vérifie l'allowance
-  const need = ethers.parseUnits(String(stakeNodc),18);
-  const cur = await nodc.allowance(me, ADDR.morpion);
-  if(cur < need){
-    $("tableHint").textContent = "Autorise le Morpion à utiliser tes NODC (une fois)…";
-    const tx = await nodc.approve(ADDR.morpion, ethers.MaxUint256);
-    await tx.wait();
-    toast("NODC autorisés pour le jeu ✓");
-  }
-}
-async function createTable(isPrivate){
-  try{
-    const stake = $("stakeSel").value;
-    await ensureApprovedForStake(stake);
-    $("tableHint").textContent = "Confirme la création dans Phantom…";
-    const tx = await morpion.createTable(ethers.parseUnits(stake,18), isPrivate);
-    const rc = await tx.wait();
-    // récupérer l'id via l'event ou nextTableId-1
-    let id = null;
-    for(const log of rc.logs){
-      try{ const p = morpion.interface.parseLog(log); if(p && p.name==="TableCreated"){ id = p.args.tableId; break; } }catch(e){}
-    }
-    if(id===null){ id = (await morpion.nextTableId()) - 1n; }
-    toast("Table créée : nº "+id.toString());
-    $("tableHint").innerHTML = "Table <b>nº "+id.toString()+"</b> créée. Partage ce numéro à ton adversaire.";
-    openTable(id);
-    refreshBalances();
-  }catch(e){ $("tableHint").textContent = err(e); }
-}
-async function joinById(){
-  try{
-    const id = BigInt($("joinId").value||"0");
-    // approuver selon la mise de la table
-    const t = await morpion.getTable(id);
-    await ensureApprovedForStake(f18(t.stake));
-    $("tableHint").textContent = "Confirme dans Phantom…";
-    const tx = await morpion.joinTable(id);
-    await tx.wait();
-    toast("Table rejointe ✓");
-    openTable(id);
-    refreshBalances();
-  }catch(e){ $("tableHint").textContent = err(e); }
-}
-async function joinPub(){
-  try{
-    const stake = $("stakeSel").value;
-    await ensureApprovedForStake(stake);
-    $("tableHint").textContent = "Recherche d'une table publique…";
-    const tx = await morpion.joinPublic(ethers.parseUnits(stake,18));
-    const rc = await tx.wait();
-    // on relit nextTableId pour retrouver, ou on demande a l'utilisateur ; simplifions : scan via getTable
-    toast("Partie publique rejointe ✓");
-    // trouver la table ou je suis O : on tente les dernieres
-    const next = await morpion.nextTableId();
-    for(let i=next-1n;i>=1n && i>next-30n;i--){
-      const t = await morpion.getTable(i);
-      if(t.playerO.toLowerCase()===me.toLowerCase() && t.status===1n){ openTable(i); break; }
-    }
-    refreshBalances();
-  }catch(e){ $("tableHint").textContent = err(e); }
-}
-
-function openTable(id){
-  currentTable = BigInt(id);
-  $("gameArea").style.display="block";
-  renderBoard(Array(9).fill(0));
-  refreshGame();
-  if(pollTimer) clearInterval(pollTimer);
-  pollTimer = setInterval(refreshGame, 5000); // rafraîchit l'état toutes les 5 s
-}
-
-function renderBoard(cells, canPlay){
-  const b = $("board"); b.innerHTML="";
-  cells.forEach((v,i)=>{
-    const d=document.createElement("div");
-    d.className="cell"+(v==1?" x taken":v==2?" o taken":"");
-    d.textContent = v==1?"✕":v==2?"◯":"";
-    if(v==0 && canPlay){ d.onclick=()=>playCell(i); }
-    b.appendChild(d);
+/* ---- Mises ---- */
+function renderStakes(){
+  const s=$("stakes");s.innerHTML="";
+  STAKES.forEach(v=>{
+    const b=document.createElement("div");
+    b.className="stake"+(v===selStake?" sel":"");
+    b.innerHTML=`${v}<small>NODC</small>`;
+    b.onclick=()=>{selStake=v;renderStakes();};
+    s.appendChild(b);
   });
 }
 
+/* ---- Autorisation NODC pour le jeu ---- */
+async function ensureApproved(stake){
+  const need=ethers.parseUnits(String(stake),18);
+  const cur=await nodc.allowance(me,ADDR.morpion);
+  if(cur<need){ $("createHint").innerHTML=`<span class="spinner"></span>Autorise le jeu à utiliser tes NODC…`; const t=await nodc.approve(ADDR.morpion,ethers.MaxUint256); await t.wait(); }
+}
+
+/* ---- Créer / rejoindre ---- */
+async function createTable(isPriv){
+  if(!me){toast("Connecte ton wallet.");return;}
+  const h=$("createHint");
+  try{
+    await ensureApproved(selStake);
+    h.innerHTML=`<span class="spinner"></span>Création — confirme dans Phantom…`;
+    const t=await morpion.createTable(ethers.parseUnits(String(selStake),18),isPriv);
+    const rc=await t.wait();
+    let id=null;
+    for(const l of rc.logs){try{const p=morpion.interface.parseLog(l);if(p&&p.name==="TableCreated"){id=p.args.tableId;break;}}catch(e){}}
+    if(id===null) id=(await morpion.nextTableId())-1n;
+    h.innerHTML=`Table <b>nº ${id}</b> créée. Partage ce numéro à ton adversaire.`;
+    enterTable(id);
+  }catch(e){h.textContent=err(e);}
+}
+$("createPrivBtn").onclick=()=>createTable(true);
+$("createPubBtn").onclick=()=>createTable(false);
+
+async function joinById(){
+  const v=$("joinId").value; if(!v){toast("Entre un numéro de table.");return;}
+  const id=BigInt(v); const h=$("joinHint");
+  try{
+    const t0=await morpion.getTable(id);
+    if(Number(t0.status)!==0){ h.textContent="Cette table n'est pas ouverte."; return; }
+    await ensureApproved(f18(t0.stake));
+    h.innerHTML=`<span class="spinner"></span>On rejoint — confirme dans Phantom…`;
+    const t=await morpion.joinTable(id); await t.wait();
+    enterTable(id);
+  }catch(e){h.textContent=err(e);}
+}
+$("joinBtn").onclick=joinById;
+
+async function joinPub(){
+  if(!me){toast("Connecte ton wallet.");return;}
+  const h=$("joinHint");
+  try{
+    const open=await morpion.openTablesFor(ethers.parseUnits(String(selStake),18));
+    const mine=me.toLowerCase();
+    let target=null;
+    for(const id of open){ const t=await morpion.getTable(id); if(Number(t.status)===0 && t.playerX.toLowerCase()!==mine){ target=id; break; } }
+    if(target===null){ h.textContent="Aucune table publique ouverte à cette mise. Crées-en une !"; return; }
+    await ensureApproved(selStake);
+    h.innerHTML=`<span class="spinner"></span>On rejoint la table nº ${target}…`;
+    const t=await morpion.joinTable(target); await t.wait();
+    enterTable(target);
+  }catch(e){h.textContent=err(e);}
+}
+$("joinPubBtn").onclick=joinPub;
+
+/* ---- Partie ---- */
+function enterTable(id){
+  curTable=BigInt(id);
+  localStorage.setItem(LS_TABLE,curTable.toString());
+  $("lobby").style.display="none";
+  $("gameArea").style.display="block";
+  renderBoard(Array(9).fill(0),false);
+  refreshGame();
+  startPoll();
+}
+async function resumeTable(id){
+  const t=await morpion.getTable(id);
+  const st=Number(t.status);
+  if(st===0||st===1){ openMorpion(); enterTable(id); }
+  else localStorage.removeItem(LS_TABLE);
+}
+$("leaveGame").onclick=()=>{ stopPoll(); $("gameArea").style.display="none"; $("lobby").style.display="block"; };
+
+function startPoll(){ stopPoll(); poll=setInterval(refreshGame,5000); }
+function stopPoll(){ if(poll){clearInterval(poll);poll=null;} }
+
+function renderBoard(cells,myTurn){
+  const b=$("board");b.innerHTML="";
+  cells.forEach((v,i)=>{
+    const d=document.createElement("div");
+    let cls="cell";
+    if(v===1)cls+=" x"; else if(v===2)cls+=" o"; else { cls+=" free"; if(myTurn)cls+=" myturn"; }
+    d.className=cls;
+    d.textContent=v===1?"✕":v===2?"◯":"";
+    if(v===0&&myTurn) d.onclick=()=>playCell(i);
+    b.appendChild(d);
+  });
+}
 async function refreshGame(){
-  if(currentTable===null) return;
+  if(curTable===null)return;
   try{
-    const t = await morpion.getTable(currentTable);
-    const board = t.board.map(x=>Number(x));
-    const status = Number(t.status);
-    const iAmX = t.playerX.toLowerCase()===me.toLowerCase();
-    const iAmO = t.playerO.toLowerCase()===me.toLowerCase();
-    const myTurn = (status===1) && ((t.xToMove && iAmX) || (!t.xToMove && iAmO));
-    renderBoard(board, myTurn);
-    let s="";
-    if(status===0){ s = "Table nº"+currentTable+" — en attente d'un adversaire…"; }
-    else if(status===1){
-      const who = t.xToMove ? '<span class="turn-x">✕ à jouer</span>' : '<span class="turn-o">◯ à jouer</span>';
-      const mine = myTurn ? " — <b>à toi</b>" : "";
-      s = "Partie en cours · "+who+mine+' · <span class="pill">'+(iAmX?"tu es ✕":iAmO?"tu es ◯":"spectateur")+'</span>';
-    }
-    else if(status===2){
-      if(t.winner===ethers.ZeroAddress){ s = "Match nul — mises rendues (moins la petite commission)."; }
-      else { const iWon = t.winner.toLowerCase()===me.toLowerCase(); s = iWon ? "🏆 Tu as gagné !" : "Partie terminée — adversaire vainqueur."; }
-      if(pollTimer){ clearInterval(pollTimer); pollTimer=null; }
-      refreshBalances();
-    }
-    else if(status===3){ s = "Table annulée."; }
-    $("gameStatus").innerHTML = s;
-    $("abandonBtn").style.display = (status===1 && (iAmX||iAmO)) ? "" : "none";
-    $("timeoutBtn").style.display = (status===1 && (iAmX||iAmO)) ? "" : "none";
-  }catch(e){ $("playHint").textContent = err(e); }
+    const t=await morpion.getTable(curTable);
+    const board=t.board.map(Number), st=Number(t.status);
+    const iX=t.playerX.toLowerCase()===me.toLowerCase(), iO=t.playerO.toLowerCase()===me.toLowerCase();
+    const myTurn=st===1&&((t.xToMove&&iX)||(!t.xToMove&&iO));
+    renderBoard(board,myTurn);
+    const sb=$("statusBar");
+    if(st===0) sb.textContent="En attente d'un adversaire… (table nº"+curTable+")";
+    else if(st===1){
+      const who=t.xToMove?'<span class="x">✕</span>':'<span class="o">◯</span>';
+      sb.innerHTML=myTurn?`À toi de jouer ${who}`:`Au tour de ${who}`;
+    } else if(st===2){
+      stopPoll(); localStorage.removeItem(LS_TABLE);
+      if(t.winner===ethers.ZeroAddress) sb.textContent="Match nul 🤝";
+      else sb.innerHTML=t.winner.toLowerCase()===me.toLowerCase()?"🏆 Tu as gagné !":"Perdu — l'adversaire l'emporte.";
+      refreshBal();
+    } else if(st===3){ stopPoll(); localStorage.removeItem(LS_TABLE); sb.textContent="Table annulée."; }
+    const playing=st===1&&(iX||iO);
+    $("abandonBtn").style.display=playing?"":"none";
+    $("timeoutBtn").style.display=playing?"":"none";
+  }catch(e){ $("playHint").textContent=err(e); }
 }
-
 async function playCell(i){
+  try{ $("playHint").innerHTML=`<span class="spinner"></span>Confirme ton coup…`; const t=await morpion.play(curTable,i); await t.wait(); $("playHint").textContent=""; refreshGame(); }
+  catch(e){ $("playHint").textContent=err(e); }
+}
+$("abandonBtn").onclick=async()=>{ try{const t=await morpion.abandon(curTable);await t.wait();toast("Partie abandonnée.");refreshGame();}catch(e){$("playHint").textContent=err(e);} };
+$("timeoutBtn").onclick=async()=>{ try{const t=await morpion.claimTimeout(curTable);await t.wait();toast("Forfait réclamé.");refreshGame();}catch(e){$("playHint").textContent=err(e);} };
+
+/* ---- Historique (depuis la blockchain) ---- */
+async function loadHistory(){
+  const list=$("histList");
+  if(!me){ list.innerHTML='<div class="empty">Connecte ton wallet pour voir tes parties.</div>'; return; }
+  list.innerHTML='<div class="empty"><span class="spinner"></span>Lecture de la blockchain…</div>';
   try{
-    $("playHint").textContent = "Confirme ton coup dans Phantom…";
-    const tx = await morpion.play(currentTable, i);
-    await tx.wait();
-    $("playHint").textContent = "";
-    refreshGame();
-  }catch(e){ $("playHint").textContent = err(e); }
-}
-async function doAbandon(){
-  try{ const tx=await morpion.abandon(currentTable); await tx.wait(); toast("Partie abandonnée."); refreshGame(); }
-  catch(e){ $("playHint").textContent = err(e); }
-}
-async function doTimeout(){
-  try{ const tx=await morpion.claimTimeout(currentTable); await tx.wait(); toast("Forfait réclamé."); refreshGame(); }
-  catch(e){ $("playHint").textContent = err(e); }
+    const next=Number(await morpion.nextTableId());
+    const rows=[];
+    for(let i=next-1;i>=1 && i>=next-40;i--){
+      const t=await morpion.getTable(i);
+      const iX=t.playerX.toLowerCase()===me.toLowerCase(), iO=t.playerO.toLowerCase()===me.toLowerCase();
+      if(!iX&&!iO) continue;
+      const st=Number(t.status);
+      let res="",cls="";
+      if(st===2){ if(t.winner===ethers.ZeroAddress){res="Nul";cls="draw";} else if(t.winner.toLowerCase()===me.toLowerCase()){res="Gagné";cls="win";} else {res="Perdu";cls="lose";} }
+      else if(st===1){res="En cours";cls="draw";}
+      else if(st===0){res="Ouverte";cls="draw";}
+      else {res="Annulée";cls="draw";}
+      rows.push(`<div class="hist-item"><div class="ico">⭕</div><div class="mid"><div class="t">Morpion · nº${i}</div><div class="s">Mise ${f18(t.stake)} NODC</div></div><div class="res ${cls}">${res}</div></div>`);
+    }
+    list.innerHTML=rows.length?rows.join(""):'<div class="empty">Aucune partie pour l\'instant. Va jouer !</div>';
+  }catch(e){ list.innerHTML='<div class="empty">'+err(e)+'</div>'; }
 }
 
-/* ---------- Erreurs lisibles ---------- */
+/* ---- Erreurs lisibles ---- */
 function err(e){
-  const m = (e && (e.reason || e.shortMessage || e.message)) || String(e);
-  if(/user rejected|denied/i.test(m)) return "Transaction annulée dans Phantom.";
-  if(/insufficient funds/i.test(m)) return "Pas assez d'ETH de test pour le gas.";
-  if(/BelowMinDeposit/i.test(m)) return "Dépôt minimum : 1 USDC.";
-  if(/StakeNotAllowed/i.test(m)) return "Palier de mise non autorisé.";
-  if(/NotYourTurn/i.test(m)) return "Ce n'est pas ton tour.";
-  if(/CellTaken/i.test(m)) return "Case déjà occupée.";
-  if(/TableNotOpen/i.test(m)) return "Cette table n'est plus ouverte.";
-  if(/AlreadyHasOpponent/i.test(m)) return "Cette table a déjà deux joueurs.";
-  if(/TimeoutNotReached/i.test(m)) return "Le délai de forfait (10 min) n'est pas atteint.";
-  return "Erreur : "+m.slice(0,140);
+  const m=(e&&(e.reason||e.shortMessage||e.message))||String(e);
+  if(/user rejected|denied/i.test(m))return "Transaction annulée.";
+  if(/insufficient funds/i.test(m))return "Pas assez d'ETH de test pour le gas.";
+  if(/BelowMinDeposit/i.test(m))return "Dépôt minimum : 1 USDC.";
+  if(/StakeNotAllowed/i.test(m))return "Mise non autorisée.";
+  if(/NotYourTurn/i.test(m))return "Ce n'est pas ton tour.";
+  if(/CellTaken/i.test(m))return "Case déjà prise.";
+  if(/TableNotOpen/i.test(m))return "Table plus ouverte.";
+  if(/AlreadyHasOpponent/i.test(m))return "Table déjà complète.";
+  if(/TimeoutNotReached/i.test(m))return "Délai de forfait (10 min) pas atteint.";
+  if(/missing revert data|CALL_EXCEPTION/i.test(m))return "Action impossible sur cette table.";
+  return "Erreur : "+m.slice(0,120);
 }
 
-/* ---------- Branchements ---------- */
-$("connectBtn").onclick = connect;
-$("approveBtn").onclick = doApprove;
-$("depositBtn").onclick = doDeposit;
-$("withdrawBtn").onclick = doWithdraw;
-$("createPrivBtn").onclick = ()=>createTable(true);
-$("createPubBtn").onclick = ()=>createTable(false);
-$("joinBtn").onclick = joinById;
-$("joinPubBtn").onclick = joinPub;
-$("joinPubBtn").onclick = joinPub;
-$("refreshBtn").onclick = refreshGame;
-$("abandonBtn").onclick = doAbandon;
-$("timeoutBtn").onclick = doTimeout;
-
-// tentative de connexion auto si déjà autorisé
-window.addEventListener("load",()=>{ const eth=window.ethereum||(window.phantom&&window.phantom.ethereum); if(eth && eth.selectedAddress){ connect(); } });
+/* ---- Init ---- */
+renderGames(); renderStakes();
+window.addEventListener("load",()=>{ const eth=window.ethereum||(window.phantom&&window.phantom.ethereum); if(eth&&eth.selectedAddress) connect(); else $("walletTxt").textContent="Connecter"; });
 </script>
 </body>
 </html>
